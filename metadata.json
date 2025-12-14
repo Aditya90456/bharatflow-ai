@@ -1,0 +1,9 @@
+{
+  "name": "BharatFlow AI",
+  "description": "Enterprise Traffic Management Dashboard",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation",
+    "microphone"
+  ]
+}

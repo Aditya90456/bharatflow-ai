@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BharatFlow AI | Smart Traffic Management</title>
+    <meta name="description" content="Next-Gen Traffic Control System powered by Gemini 2.5 AI. Features real-time LHT physics simulation for Indian Smart Cities.">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BharatFlow AI - Smart Traffic Grid">
+    <meta property="og:description" content="Live Digital Twin of Indian City Traffic managed by Artificial Intelligence.">
+    <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Traffic_lights_at_night_in_Pune.jpg/1200px-Traffic_lights_at_night_in_Pune.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="BharatFlow AI">
+    <meta property="twitter:description" content="AI-driven Traffic Optimization for Indian Metros.">
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+      body {
+        background-color: #030305;
+        color: #e2e8f0;
+        overflow: hidden;
+      }
+      
+      .animated-grid {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #030305;
+        background-image:
+          linear-gradient(to right, rgba(6, 182, 212, 0.1) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: grid-pulse 20s linear infinite;
+        z-index: -1;
+      }
+      .animated-grid::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at center, transparent 30%, #030305 100%);
+      }
+
+      /* HUD Scrollbar */
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0A0B10;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #23242F;
+        border-radius: 2px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3B82F6;
+      }
+
+      .glass {
+        background: rgba(10, 11, 16, 0.6);
+        backdrop-filter: blur(24px) saturate(150%);
+        -webkit-backdrop-filter: blur(24px) saturate(150%);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      }
+
+      .hud-bracket {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-color: rgba(6, 182, 212, 0.3);
+        border-style: solid;
+        transition: all 0.3s ease;
+      }
+      .hud-bracket-tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+      .hud-bracket-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+      .hud-bracket-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+      .hud-bracket-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+      .group:hover .hud-bracket {
+        width: 30px;
+        height: 30px;
+        border-color: rgba(6, 182, 212, 1);
+        box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+      }
+      
+      .satellite-view-container {
+        perspective: 1200px;
+      }
+      .satellite-view-canvas {
+        transform: rotateX(55deg) rotateZ(0deg) scale(0.8);
+        box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+      }
+
+      .scanline-effect {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          rgba(0, 0, 0, 0.2) 50%,
+          transparent
+        );
+        background-size: 100% 3px;
+        animation: scan-vertical 5s linear infinite;
+        pointer-events: none;
+        opacity: 0.15;
+        z-index: 10;
+      }
+
+      .animate-in {
+        animation-duration: 500ms;
+        animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+        animation-fill-mode: both;
+      }
+      .fade-in { animation-name: fade-in; }
+      .slide-in-from-left-8 { animation-name: slide-in-from-left; --slide-from: -32px; }
+      @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+      @keyframes slide-in-from-left { 0% { transform: translateX(var(--slide-from)); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+      @keyframes zoom-in-90 { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    </style>
+
+<link rel="stylesheet" href="/src/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

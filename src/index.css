@@ -1,0 +1,402 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&family=Rajdhani:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;700;800;900&display=swap');
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow: hidden;
+    background-attachment: fixed;
+  }
+  
+  /* Selection styling */
+  ::selection {
+    background: rgba(6, 182, 212, 0.3);
+    color: #f1f5f9;
+  }
+}
+
+@layer components {
+  /* Enhanced Glass Effect */
+  .glass {
+    background: rgba(15, 15, 26, 0.7);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border: 1px solid rgba(6, 182, 212, 0.1);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 0 0 1px rgba(6, 182, 212, 0.05);
+    position: relative;
+  }
+  
+  .glass::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.3), transparent);
+  }
+  
+  /* Cyber Glass - More futuristic */
+  .cyber-glass {
+    background: rgba(10, 10, 15, 0.8);
+    backdrop-filter: blur(20px) saturate(200%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    box-shadow: 
+      0 0 40px rgba(6, 182, 212, 0.1),
+      inset 0 1px 0 rgba(6, 182, 212, 0.1),
+      0 8px 32px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .cyber-glass::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent,
+      rgba(6, 182, 212, 0.03),
+      transparent
+    );
+    animation: hologram 8s linear infinite;
+    pointer-events: none;
+  }
+  
+  /* Neon Button */
+  .neon-button {
+    @apply relative px-6 py-3 font-medium text-cyan-400 transition-all duration-300;
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    box-shadow: 
+      0 0 20px rgba(6, 182, 212, 0.2),
+      inset 0 1px 0 rgba(6, 182, 212, 0.1);
+  }
+  
+  .neon-button:hover {
+    @apply text-white;
+    background: rgba(6, 182, 212, 0.2);
+    border-color: rgba(6, 182, 212, 0.6);
+    box-shadow: 
+      0 0 30px rgba(6, 182, 212, 0.4),
+      inset 0 1px 0 rgba(6, 182, 212, 0.2);
+    transform: translateY(-1px);
+  }
+  
+  /* Status Indicators */
+  .status-online {
+    @apply relative;
+    color: #22c55e;
+  }
+  
+  .status-online::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #22c55e;
+    animation: pulse-glow 2s infinite;
+  }
+  
+  .status-warning {
+    @apply relative;
+    color: #f59e0b;
+  }
+  
+  .status-warning::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: #f59e0b;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #f59e0b;
+    animation: pulse-glow 1.5s infinite;
+  }
+  
+  .status-danger {
+    @apply relative;
+    color: #ef4444;
+  }
+  
+  .status-danger::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: #ef4444;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ef4444;
+    animation: cyber-flicker 0.1s infinite;
+  }
+}
+
+@layer utilities {
+  /* Enhanced Animated Grid Background */
+  .animated-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(circle at 25% 25%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+      linear-gradient(to right, rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+      #0a0a0f;
+    background-size: 60px 60px, 80px 80px, 40px 40px, 40px 40px;
+    animation: grid-pulse 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -2;
+  }
+  
+  .animated-grid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at center, transparent 20%, rgba(10, 10, 15, 0.8) 70%),
+      linear-gradient(45deg, transparent 30%, rgba(6, 182, 212, 0.02) 50%, transparent 70%);
+    animation: hologram 15s linear infinite;
+  }
+  
+  /* Cyber HUD Elements */
+  .hud-bracket {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: rgba(6, 182, 212, 0.4);
+    border-style: solid;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hud-bracket-tl { 
+    top: -2px; 
+    left: -2px; 
+    border-width: 2px 0 0 2px; 
+  }
+  .hud-bracket-tr { 
+    top: -2px; 
+    right: -2px; 
+    border-width: 2px 2px 0 0; 
+  }
+  .hud-bracket-bl { 
+    bottom: -2px; 
+    left: -2px; 
+    border-width: 0 0 2px 2px; 
+  }
+  .hud-bracket-br { 
+    bottom: -2px; 
+    right: -2px; 
+    border-width: 0 2px 2px 0; 
+  }
+
+  .group:hover .hud-bracket {
+    width: 32px;
+    height: 32px;
+    border-color: rgba(6, 182, 212, 0.8);
+    box-shadow: 
+      0 0 20px rgba(6, 182, 212, 0.3),
+      inset 0 0 10px rgba(6, 182, 212, 0.1);
+  }
+  
+  /* Enhanced Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 15, 26, 0.5);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(6, 182, 212, 0.6), rgba(59, 130, 246, 0.6));
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(6, 182, 212, 0.8), rgba(59, 130, 246, 0.8));
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+  }
+  
+  /* Satellite View Enhancement */
+  .satellite-view-container {
+    perspective: 1500px;
+    transform-style: preserve-3d;
+  }
+  
+  .satellite-view-canvas {
+    transform: rotateX(60deg) rotateZ(0deg) scale(0.85);
+    box-shadow: 
+      0 50px 100px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(6, 182, 212, 0.2),
+      0 0 50px rgba(6, 182, 212, 0.1);
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .satellite-view-canvas:hover {
+    transform: rotateX(55deg) rotateZ(1deg) scale(0.9);
+  }
+
+  /* Enhanced Scanline Effects */
+  .scanline-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(6, 182, 212, 0.1) 45%,
+      rgba(6, 182, 212, 0.2) 50%,
+      rgba(6, 182, 212, 0.1) 55%,
+      transparent 100%
+    );
+    background-size: 100% 4px;
+    animation: scan-vertical 6s linear infinite;
+    pointer-events: none;
+    opacity: 0.6;
+    z-index: 10;
+  }
+  
+  .scanline-horizontal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(59, 130, 246, 0.1) 45%,
+      rgba(59, 130, 246, 0.2) 50%,
+      rgba(59, 130, 246, 0.1) 55%,
+      transparent 100%
+    );
+    background-size: 4px 100%;
+    animation: scan-horizontal 8s linear infinite;
+    pointer-events: none;
+    opacity: 0.4;
+    z-index: 9;
+  }
+  
+  /* Data Flow Animation */
+  .data-flow {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .data-flow::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(6, 182, 212, 0.8),
+      transparent
+    );
+    animation: data-flow 2s linear infinite;
+  }
+  
+  /* Holographic Text Effect */
+  .holographic {
+    background: linear-gradient(
+      45deg,
+      #06b6d4,
+      #3b82f6,
+      #8b5cf6,
+      #06b6d4
+    );
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: hologram 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.3));
+  }
+  
+  /* Glitch Effect */
+  .glitch {
+    position: relative;
+    animation: cyber-flicker 0.15s infinite linear alternate-reverse;
+  }
+  
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .glitch::before {
+    animation: glitch-1 0.5s infinite;
+    color: #ff0040;
+    z-index: -1;
+  }
+  
+  .glitch::after {
+    animation: glitch-2 0.5s infinite;
+    color: #00ffff;
+    z-index: -2;
+  }
+  
+  @keyframes glitch-1 {
+    0%, 14%, 15%, 49%, 50%, 99%, 100% {
+      transform: translate(0);
+    }
+    15%, 49% {
+      transform: translate(-2px, 1px);
+    }
+  }
+  
+  @keyframes glitch-2 {
+    0%, 20%, 21%, 62%, 63%, 99%, 100% {
+      transform: translate(0);
+    }
+    21%, 62% {
+      transform: translate(2px, -1px);
+    }
+  }
+}
