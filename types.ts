@@ -128,3 +128,46 @@ export interface CongestedJunctionInfo {
   nsQueue: number;
   ewQueue: number;
 }
+
+// Search Engine AI Types
+export interface SearchContext {
+  currentCity: string;
+  selectedIntersections: string[];
+  activeIncidents: Incident[];
+  currentTrafficStats: TrafficStats;
+  userRole: 'operator' | 'planner' | 'admin';
+  timestamp: number;
+}
+
+export interface SearchResultItem {
+  id: string;
+  type: 'intersection' | 'vehicle' | 'incident' | 'historical' | 'system';
+  title: string;
+  description: string;
+  relevanceScore: number;
+  highlightedTerms: string[];
+  actionable: boolean;
+  navigationTarget?: string;
+  metadata: Record<string, any>;
+}
+
+export interface SearchSuggestion {
+  text: string;
+  type: 'completion' | 'category' | 'entity';
+  confidence: number;
+  icon?: string;
+}
+
+export interface SearchEngine {
+  processQuery(query: string, context: SearchContext): Promise<SearchResultItem[]>;
+  getSuggestions(partialQuery: string, context: SearchContext): Promise<SearchSuggestion[]>;
+  logQuery(query: string, results: SearchResultItem[], userId?: string): void;
+  buildIndex(data: TrafficData): void;
+}
+
+export interface TrafficData {
+  intersections: Intersection[];
+  vehicles: Car[];
+  incidents: Incident[];
+  roads: Road[];
+}

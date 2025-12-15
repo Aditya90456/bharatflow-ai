@@ -1,6 +1,18 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { LandingPage } from './components/LandingPage';
-import { FeaturesPage, LiveMapPage, PublicDataPage, ApiDocsPage, AiFeaturesPage, RealtimeAiPage, JunctionsAiPage, MlDesignPage, HldPage } from './components/PublicPages';
+import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+
+// Lazy load components for better initial load performance
+const LandingPage = lazy(() => import('./components/LandingPage').then(module => ({ default: module.LandingPage })));
+const FeaturesPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.FeaturesPage })));
+const LiveMapPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.LiveMapPage })));
+const PublicDataPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.PublicDataPage })));
+const ApiDocsPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.ApiDocsPage })));
+const AiFeaturesPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.AiFeaturesPage })));
+const RealtimeAiPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.RealtimeAiPage })));
+const JunctionsAiPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.JunctionsAiPage })));
+const MlDesignPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.MlDesignPage })));
+const HldPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.HldPage })));
+
+// Core dashboard components - load immediately for better UX
 import { SimulationSection } from './components/SimulationSection';
 import { CameraFeed } from './components/CameraFeed';
 import { StatsCard } from './components/StatsCard';
@@ -19,37 +31,46 @@ import {
 type ViewState = 'LANDING' | 'DASHBOARD' | 'FEATURES' | 'PUBLIC_MAP' | 'PUBLIC_DATA' | 'API_DOCS' | 'AI_FEATURES' | 'REALTIME_AI' | 'JUNCTIONS_AI' | 'ML_DESIGN' | 'HLD';
 type ActiveTab = 'OVERVIEW' | 'JUNCTION' | 'UNIT' | 'INTEL' | 'CCTV' | 'INCIDENT' | 'DATA_HUB';
 
-// Enhanced Boot Sequence Component
+// Enhanced Boot Sequence Component with optimized loading
 const SystemBoot: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const [lines, setLines] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [currentSystem, setCurrentSystem] = useState('');
   
-  const bootLogs = [
-    { text: "INITIALIZING BHARATFLOW KERNEL v5.0.0...", system: "CORE", delay: 300 },
-    { text: "ESTABLISHING QUANTUM LINK... [OK]", system: "NETWORK", delay: 400 },
-    { text: "LOADING NEURAL TOPOLOGY: BANGALORE (TESTBED)", system: "AI", delay: 500 },
-    { text: "SYNCING WITH IoT SENSOR GRID: 99.8% COMPLETE", system: "SENSORS", delay: 600 },
-    { text: "CALIBRATING LHT PHYSICS ENGINE...", system: "PHYSICS", delay: 400 },
-    { text: "STARTING AI TACTICAL ENGINE (GEMINI-2.5)...", system: "AI", delay: 700 },
-    { text: "HOLOGRAPHIC INTERFACE READY...", system: "UI", delay: 300 },
-    { text: "SYSTEM READY. COMMAND AWAITED.", system: "READY", delay: 500 }
-  ];
+  const bootLogs = useMemo(() => [
+    { text: "INITIALIZING BHARATFLOW KERNEL v5.0.0...", system: "CORE", delay: 200 },
+    { text: "ESTABLISHING QUANTUM LINK... [OK]", system: "NETWORK", delay: 250 },
+    { text: "LOADING NEURAL TOPOLOGY: BANGALORE (TESTBED)", system: "AI", delay: 300 },
+    { text: "SYNCING WITH IoT SENSOR GRID: 99.8% COMPLETE", system: "SENSORS", delay: 350 },
+    { text: "CALIBRATING LHT PHYSICS ENGINE...", system: "PHYSICS", delay: 250 },
+    { text: "STARTING AI TACTICAL ENGINE (GEMINI-2.5)...", system: "AI", delay: 400 },
+    { text: "HOLOGRAPHIC INTERFACE READY...", system: "UI", delay: 200 },
+    { text: "SYSTEM READY. COMMAND AWAITED.", system: "READY", delay: 300 }
+  ], []);
 
   useEffect(() => {
     let delay = 0;
+    const timeouts: NodeJS.Timeout[] = [];
+    
     bootLogs.forEach((log, index) => {
-      delay += log.delay + Math.random() * 200;
-      setTimeout(() => {
+      delay += log.delay + Math.random() * 100; // Reduced randomness for faster loading
+      const timeout = setTimeout(() => {
         setLines(prev => [...prev, log.text]);
         setCurrentSystem(log.system);
         setProgress(((index + 1) / bootLogs.length) * 100);
         if (index === bootLogs.length - 1) {
-          setTimeout(onComplete, 1200);
+          const finalTimeout = setTimeout(onComplete, 800); // Reduced final delay
+          timeouts.push(finalTimeout);
         }
       }, delay);
+      timeouts.push(timeout);
     });
-  }, [onComplete]);
+
+    // Cleanup function to prevent memory leaks
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [onComplete, bootLogs]);
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex items-center justify-center font-mono overflow-hidden">
@@ -206,9 +227,15 @@ export const App: React.FC = () => {
     const names = CITY_CONFIGS[city] || [];
     const arr: Intersection[] = [];
     let nameIdx = 0;
+    
+    // Pre-allocate array for better performance
+    const totalIntersections = GRID_SIZE * GRID_SIZE;
+    arr.length = totalIntersections;
+    
+    let index = 0;
     for (let x = 0; x < GRID_SIZE; x++) {
       for (let y = 0; y < GRID_SIZE; y++) {
-        arr.push({
+        arr[index++] = {
           id: `INT-${x}-${y}`,
           label: names[nameIdx++] || `Sector ${x}-${y}`,
           x,
@@ -216,7 +243,7 @@ export const App: React.FC = () => {
           lightState: { ns: LightState.GREEN, ew: LightState.RED },
           timer: INITIAL_GREEN_DURATION,
           greenDuration: INITIAL_GREEN_DURATION
-        });
+        };
       }
     }
     return arr;
@@ -224,7 +251,16 @@ export const App: React.FC = () => {
   
   const generateRoads = useCallback((city: string): Road[] => {
       const roadNames = ROAD_NAMES[city] || ROAD_NAMES["Bangalore"];
+      
+      // Pre-calculate total roads for better performance
+      const horizontalRoads = GRID_SIZE * (GRID_SIZE - 1);
+      const verticalRoads = (GRID_SIZE - 1) * GRID_SIZE;
+      const totalRoads = horizontalRoads + verticalRoads;
+      
       const generatedRoads: Road[] = [];
+      generatedRoads.length = totalRoads;
+      
+      let roadIndex = 0;
       let hIdx = 0;
       let vIdx = 0;
 
@@ -233,12 +269,22 @@ export const App: React.FC = () => {
               if (x < GRID_SIZE - 1) {
                   const id1 = `INT-${x}-${y}`;
                   const id2 = `INT-${x + 1}-${y}`;
-                  generatedRoads.push({ id: [id1, id2].sort().join('_'), name: roadNames.horizontal[hIdx % roadNames.horizontal.length], intersection1Id: id1, intersection2Id: id2 });
+                  generatedRoads[roadIndex++] = { 
+                    id: `${id1}_${id2}`, // Avoid sorting for better performance
+                    name: roadNames.horizontal[hIdx % roadNames.horizontal.length], 
+                    intersection1Id: id1, 
+                    intersection2Id: id2 
+                  };
               }
               if (y < GRID_SIZE - 1) {
                   const id1 = `INT-${x}-${y}`;
                   const id2 = `INT-${x}-${y + 1}`;
-                  generatedRoads.push({ id: [id1, id2].sort().join('_'), name: roadNames.vertical[vIdx % roadNames.vertical.length], intersection1Id: id1, intersection2Id: id2 });
+                  generatedRoads[roadIndex++] = { 
+                    id: `${id1}_${id2}`, // Avoid sorting for better performance
+                    name: roadNames.vertical[vIdx % roadNames.vertical.length], 
+                    intersection1Id: id1, 
+                    intersection2Id: id2 
+                  };
               }
           }
           hIdx++;

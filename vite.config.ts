@@ -8,7 +8,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, (process as any).cwd(), '');
 
   return {
-    plugins: [react()],
+    plugins: [
+      react({
+        // Enable Fast Refresh for better development experience
+        fastRefresh: true,
+        // Optimize JSX runtime
+        jsxRuntime: 'automatic'
+      })
+    ],
     define: {
       // robustly define the API key so it is replaced at build time
       // Check both loaded env object AND system process.env to ensure key is found
@@ -18,25 +25,75 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: false,
-      chunkSizeWarningLimit: 2000, // Increased limit to silence npm build warnings
+      chunkSizeWarningLimit: 2000,
+      // Optimize build performance
+      target: 'esnext',
+      minify: 'esbuild',
       rollupOptions: {
         output: {
+          // Improved code splitting for better caching
           manualChunks: {
-            vendor: ['react', 'react-dom'],
-            charts: ['recharts'],
-            icons: ['@heroicons/react']
+            // Core React libraries
+            'react-vendor': ['react', 'react-dom'],
+            // UI libraries
+            'ui-vendor': ['@heroicons/react'],
+            // Chart libraries
+            'charts-vendor': ['recharts'],
+            // Search engine components
+            'search-engine': ['./services/searchEngine.ts'],
+            // Gemini AI services
+            'ai-services': ['./services/geminiService.ts']
+          },
+          // Optimize chunk naming for better caching
+          chunkFileNames: (chunkInfo) => {
+            const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+            return `js/[name]-[hash].js`;
+          },
+          entryFileNames: 'js/[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name!.split('.');
+            const ext = info[info.length - 1];
+            if (/\.(css)$/.test(assetInfo.name!)) {
+              return `css/[name]-[hash].${ext}`;
+            }
+            if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name!)) {
+              return `images/[name]-[hash].${ext}`;
+            }
+            return `assets/[name]-[hash].${ext}`;
           }
         }
       }
     },
+    // Optimize dependencies
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        '@heroicons/react/24/outline',
+        '@heroicons/react/24/solid',
+        'recharts'
+      ],
+      // Pre-bundle these for faster dev startup
+      force: false
+    },
     server: {
       host: true,
+      // Optimize dev server
+      hmr: {
+        overlay: false // Disable error overlay for better performance
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:3001',
           changeOrigin: true,
         }
       }
+    },
+    // Enable esbuild for faster builds
+    esbuild: {
+      target: 'esnext',
+      // Remove console logs in production
+      drop: mode === 'production' ? ['console', 'debugger'] : []
     }
   }
 })
