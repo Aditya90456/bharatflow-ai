@@ -4,6 +4,8 @@ import bodyParser from 'body-parser';
 import compression from 'compression';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import mongoose from './database/mongooseConnection';
+import vehicleRoutes from './routes/vehicleRoutes';
 
 // Load environment variables from .env.local in the root directory
 dotenv.config({ path: '../.env.local' });
@@ -762,6 +764,10 @@ app.get('/api/search/analytics', (req, res) => {
     }
 });
 
+// --- Vehicle Routes ---
+app.use('/api/vehicles', vehicleRoutes);
+
+// Start the server
 app.listen(port, () => {
   console.log(`BharatFlow AI Backend running at http://localhost:${port}`);
   console.log(`ML API expected at http://localhost:5000`);

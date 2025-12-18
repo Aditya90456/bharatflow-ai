@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SimulationCanvas } from './SimulationCanvas';
+import { Tooltip } from './Tooltip';
 import { TrafficStats, Intersection, Car, Incident, Road, SearchResult } from '../types';
 import { CITY_COORDINATES } from '../constants';
 import { PlayIcon, PauseIcon, ArrowsPointingOutIcon, GlobeAsiaAustraliaIcon, Squares2X2Icon, CpuChipIcon, MagnifyingGlassIcon, MapIcon, ArrowsRightLeftIcon, SparklesIcon } from '@heroicons/react/24/outline';
@@ -74,6 +75,7 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
   highlightedIntersectionId,
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [headerPulse, setHeaderPulse] = useState(false);
   const cityCoords = CITY_COORDINATES[currentCity];
 
   const groupedResults = searchResults.reduce((acc, result) => {
@@ -95,158 +97,144 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
     }
   };
 
+  useEffect(() => {
+    setHeaderPulse(true);
+    const t = setTimeout(() => setHeaderPulse(false), 700);
+    return () => clearTimeout(t);
+  }, [isRunning]);
+
+  const toggleRunning = () => setIsRunning(!isRunning);
+
   return (
-    <main className={`
-      absolute inset-0 flex flex-col min-w-0 glass rounded-2xl p-1.5 overflow-hidden transition-all duration-300
-      ${cvModeActive ? 'border-green-500/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]' : 'border-white/5'}
-    `}>
-        
-        <div className="flex-1 flex flex-col bg-background/50 rounded-xl border border-white/5 relative overflow-hidden">
-            
-            <div className="h-12 border-b border-white/5 bg-surface/50 flex items-center justify-between px-4 gap-4 z-30">
-                <div className="flex items-center gap-4 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-                        <span className="text-xs font-mono text-red-400">LIVE</span>
-                    </div>
-                    <div>
-                        <h2 className="text-sm font-tech font-bold text-white tracking-widest uppercase">
-                           SECTOR FEED: <span className="text-accent">{currentCity.toUpperCase()}</span>
-                        </h2>
-                        <div className="text-[10px] font-mono text-gray-500 -mt-1">
-                           {cityCoords.lat.toFixed(4)}, {cityCoords.lng.toFixed(4)}
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="flex-1 flex justify-center min-w-0">
-                    <div className="relative w-full max-w-lg">
-                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                        <input
-                            type="text"
-                            placeholder="Filter or ask AI (e.g., 'find police cars')"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setIsSearchFocused(true)}
-                            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                            onKeyDown={handleKeyDown}
-                            className="w-full bg-surface/80 border border-border rounded-lg pl-9 pr-20 py-1.5 text-sm placeholder-gray-500 focus:ring-1 focus:ring-accent focus:border-accent transition-all"
-                        />
-                         {isAiSearching ? (
-                            <svg className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        ) : (
-                           searchQuery && <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center text-gray-600 text-[10px] font-mono border border-gray-700 rounded px-1.5 py-0.5">
-                                AI <span className="ml-1">↵</span>
-                            </div>
-                        )}
-                         {isSearchFocused && searchResults.length > 0 && (
-                            <div className="absolute top-full mt-2 w-full bg-surface border border-border rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in duration-200">
-                                <ul className="max-h-80 overflow-y-auto">
-                                    {resultOrder.map(type => {
-                                      if (!groupedResults[type]) return null;
-                                      return (
-                                        <li key={type}>
-                                          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-background/50 sticky top-0">
-                                            {type}s
-                                          </div>
-                                          <ul>
-                                            {groupedResults[type].map(result => (
-                                              <li
-                                                key={result.id}
-                                                className="flex items-center gap-3 px-3 py-2 hover:bg-accent/10 cursor-pointer text-sm"
-                                                onMouseDown={() => onSearchResultSelect(result)}
-                                              >
-                                                {result.type === 'CITY' && <GlobeAsiaAustraliaIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                                                {result.type === 'INTERSECTION' && <Squares2X2Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                                                {result.type === 'ROAD' && <ArrowsRightLeftIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                                                <span className="text-gray-200 truncate">{result.name}</span>
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </li>
-                                      )
-                                    })}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                     <button 
-                       onClick={() => setIsRunning(!isRunning)} 
-                       className={`
-                         flex items-center gap-2 px-3 py-1 rounded text-[10px] font-mono font-bold border transition-all uppercase tracking-wider
-                         ${isRunning ? 'border-accent/30 bg-accent/10 text-accent hover:bg-accent/20' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-500'}
-                       `}
-                     >
-                        {isRunning ? <PauseIcon className="w-3 h-3" /> : <PlayIcon className="w-3 h-3" />}
-                        {isRunning ? 'Live' : 'Paused'}
-                     </button>
-                     <div className="w-px h-4 bg-white/10 mx-1"></div>
-                     <button
-                        onClick={() => setCvModeActive(!cvModeActive)}
-                        className={`text-gray-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10 ${cvModeActive ? 'bg-green-500/10 !text-green-400' : ''}`}
-                        title="Toggle CV Analysis Overlay"
-                     >
-                        <CpuChipIcon className="w-4 h-4" />
-                     </button>
-                     <button
-                        onClick={() => setViewMode(viewMode === 'GRID' ? 'SATELLITE' : 'GRID')}
-                        className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10"
-                        title={`Switch to ${viewMode === 'GRID' ? 'Satellite' : 'Grid'} View`}
-                     >
-                        {viewMode === 'GRID' ? <GlobeAsiaAustraliaIcon className="w-4 h-4" /> : <Squares2X2Icon className="w-4 h-4" />}
-                     </button>
-                </div>
+    <main className="absolute inset-0 flex flex-col min-w-0 glass rounded-2xl p-1.5 overflow-hidden transition-all duration-300">
+      <header className={`h-16 shadow-md flex items-center px-6 transition-all duration-500 ${headerPulse ? 'pulse-glow' : ''}`}>
+        <div className="flex items-center gap-4 w-full">
+          <div className="flex items-center gap-3">
+            <div className="text-white text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent gradient-anim">
+              Traffic Simulation
             </div>
+            <div className="text-xs text-white/70">• {currentCity}</div>
+          </div>
 
-            <div className={`
-                flex-1 relative flex items-center justify-center bg-[#08090d] shadow-inner overflow-hidden group
-                ${viewMode === 'SATELLITE' ? 'satellite-view-container' : ''}
-            `}>
-                   
-                   <div className="scanline-effect"></div>
-                   
-                   <div className="hud-bracket hud-bracket-tl opacity-50 group-hover:opacity-100 z-20"></div>
-                   <div className="hud-bracket hud-bracket-tr opacity-50 group-hover:opacity-100 z-20"></div>
-                   <div className="hud-bracket hud-bracket-bl opacity-50 group-hover:opacity-100 z-20"></div>
-                   <div className="hud-bracket hud-bracket-br opacity-50 group-hover:opacity-100 z-20"></div>
-                   
-                   <div className="absolute inset-0 pointer-events-none opacity-10 z-10" 
-                        style={{backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px'}}>
-                   </div>
-
-                   <div className={`relative transition-all duration-700 ease-in-out ${viewMode === 'SATELLITE' ? 'satellite-view-canvas' : 'grid-view-canvas'}`}>
-                      <SimulationCanvas 
-                          intersections={intersections}
-                          setIntersections={setIntersections}
-                          cars={cars}
-                          setCars={setCars}
-                          onUpdateStats={onUpdateStats}
-                          isRunning={isRunning}
-                          onIntersectionSelect={onIntersectionSelect}
-                          onCarSelect={onCarSelect}
-                          selectedCarId={selectedCarId}
-                          scenarioKey={currentCity}
-                          cvModeActive={cvModeActive}
-                          recentlyUpdatedJunctions={recentlyUpdatedJunctions}
-                          incidents={incidents}
-                          onIncidentSelect={onIncidentSelect}
-                          setIncidents={setIncidents}
-                          selectedIncidentId={selectedIncidentId}
-                          closedRoads={closedRoads}
-                          roads={roads}
-                          highlightedVehicleIds={highlightedVehicleIds}
-                          highlightedIncidentIds={highlightedIncidentIds}
-                          highlightedIntersectionId={highlightedIntersectionId}
-                      />
-                   </div>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="relative">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                onKeyDown={handleKeyDown}
+                placeholder="Search city, intersection, road..."
+                className={`transition-all duration-300 text-sm rounded-full px-3 py-2 placeholder:text-white/60 bg-white/6 text-white outline-none focus:ring-2 focus:ring-blue-400 ${
+                  isSearchFocused ? 'w-64 shadow-lg scale-105' : 'w-40'
+                }`}
+              />
+              <button
+                onClick={() => { handleAiSearch(searchQuery); setIsSearchFocused(false); }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-white/80 p-1 rounded-full hover:bg-white/8 transition-transform duration-200 active:scale-95"
+                aria-label="AI Search"
+                type="button"
+              >
+                <MagnifyingGlassIcon className={`h-4 w-4 ${isAiSearching ? 'animate-spin' : ''}`} />
+              </button>
             </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 text-xs text-white/80">
+                <span className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+                <span>Incidents</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </header>
+
+      <section className="flex-1 flex flex-col bg-gray-900 rounded-xl p-4 relative">
+        <SimulationCanvas 
+          intersections={intersections}
+          setIntersections={setIntersections}
+          cars={cars}
+          setCars={setCars}
+          onUpdateStats={onUpdateStats}
+          isRunning={isRunning}
+          onIntersectionSelect={onIntersectionSelect}
+          onCarSelect={onCarSelect}
+          selectedCarId={selectedCarId}
+          scenarioKey={currentCity}
+          cvModeActive={cvModeActive}
+          recentlyUpdatedJunctions={recentlyUpdatedJunctions}
+          incidents={incidents}
+          onIncidentSelect={onIncidentSelect}
+          setIncidents={setIncidents}
+          selectedIncidentId={selectedIncidentId}
+          closedRoads={closedRoads}
+          roads={roads}
+          highlightedVehicleIds={highlightedVehicleIds}
+          highlightedIncidentIds={highlightedIncidentIds}
+          highlightedIntersectionId={highlightedIntersectionId}
+        />
+
+        <div className="absolute right-6 bottom-6 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-xl p-2 shadow-lg transition-all duration-300">
+          <button
+            onClick={toggleRunning}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-transform duration-200 ${
+              isRunning ? 'bg-red-600 hover:scale-105' : 'bg-green-600 hover:scale-105'
+            }`}
+            aria-label={isRunning ? 'Pause simulation' : 'Start simulation'}
+            type="button"
+          >
+            {isRunning ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+            <span className="hidden sm:inline">{isRunning ? 'Pause' : 'Start'}</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode(viewMode === 'GRID' ? 'SATELLITE' : 'GRID')}
+            className="p-2 rounded-md text-white/90 hover:bg-white/6 transition-transform duration-200"
+            title="Toggle view"
+            type="button"
+          >
+            {viewMode === 'GRID' ? <MapIcon className="h-5 w-5" /> : <GlobeAsiaAustraliaIcon className="h-5 w-5" />}
+          </button>
+
+          <button
+            onClick={() => setCvModeActive(!cvModeActive)}
+            className={`p-2 rounded-md transition-all duration-200 ${cvModeActive ? 'bg-yellow-400 text-black shadow-xl scale-105' : 'hover:bg-white/6'}`}
+            title="Toggle CV Mode"
+            type="button"
+          >
+            <CpuChipIcon className="h-5 w-5" />
+          </button>
+
+          <Tooltip text="View detailed stats">
+            <button className="p-2 rounded-md hover:bg-white/6 transition-colors duration-200" type="button">
+              <Squares2X2Icon className="h-5 w-5 text-white/90" />
+            </button>
+          </Tooltip>
+        </div>
+
+        <div className="mt-4 flex justify-between items-center">
+          <div className="hidden sm:block">
+            <Tooltip text="View detailed stats">
+              <button className="btn-secondary" type="button">Stats</button>
+            </Tooltip>
+          </div>
+        </div>
+      </section>
+
+      <style jsx>{`
+        .gradient-anim {
+          background-size: 200% 200%;
+          animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .pulse-glow {
+          box-shadow: 0 6px 30px rgba(99, 102, 241, 0.12), 0 2px 10px rgba(99, 102, 241, 0.08);
+          transform: translateY(-2px);
+        }
+      `}</style>
     </main>
   );
 };
