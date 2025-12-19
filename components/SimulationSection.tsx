@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationCanvas } from './SimulationCanvas';
-import { Tooltip } from './Tooltip';
+import { SimulationCanvas } from './SimulationCanvas'; 
 import { TrafficStats, Intersection, Car, Incident, Road, SearchResult } from '../types';
-import { CITY_COORDINATES } from '../constants';
-import { PlayIcon, PauseIcon, ArrowsPointingOutIcon, GlobeAsiaAustraliaIcon, Squares2X2Icon, CpuChipIcon, MagnifyingGlassIcon, MapIcon, ArrowsRightLeftIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import {
+  PlayIcon,
+  PauseIcon,
+  GlobeAsiaAustraliaIcon,
+  Squares2X2Icon,
+  CpuChipIcon,
+  MagnifyingGlassIcon,
+  MapIcon,
+} from '@heroicons/react/24/outline';
+import { Tooltip } from './Tooltip';
 
 interface SimulationSectionProps {
   currentCity: string;
@@ -17,8 +24,8 @@ interface SimulationSectionProps {
   onIntersectionSelect: (id: string) => void;
   onCarSelect: (id: string) => void;
   selectedCarId: string | null;
-  stats: TrafficStats;
   viewMode: 'GRID' | 'SATELLITE';
+  setViode: 'GRID' | 'SATELLITE';
   setViewMode: (mode: 'GRID' | 'SATELLITE') => void;
   cvModeActive: boolean;
   setCvModeActive: (active: boolean) => void;
@@ -76,26 +83,6 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
 }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [headerPulse, setHeaderPulse] = useState(false);
-  const cityCoords = CITY_COORDINATES[currentCity];
-
-  const groupedResults = searchResults.reduce((acc, result) => {
-    const type = result.type;
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(result);
-    return acc;
-  }, {} as Record<SearchResult['type'], SearchResult[]>);
-
-  const resultOrder: SearchResult['type'][] = ['CITY', 'INTERSECTION', 'ROAD'];
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery) {
-      e.preventDefault();
-      handleAiSearch(searchQuery);
-      setIsSearchFocused(false);
-    }
-  };
 
   useEffect(() => {
     setHeaderPulse(true);
@@ -104,6 +91,19 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
   }, [isRunning]);
 
   const toggleRunning = () => setIsRunning(!isRunning);
+
+  const triggerSearch = () => {
+    if (!searchQuery.trim()) return;
+    handleAiSearch(searchQuery);
+    setIsSearchFocused(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      triggerSearch();
+    }
+  };
 
   return (
     <main className="absolute inset-0 flex flex-col min-w-0 glass rounded-2xl p-1.5 overflow-hidden transition-all duration-300">
@@ -129,27 +129,30 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
                   isSearchFocused ? 'w-64 shadow-lg scale-105' : 'w-40'
                 }`}
               />
+
               <button
-                onClick={() => { handleAiSearch(searchQuery); setIsSearchFocused(false); }}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault(); // 🔑 prevents blur race
+                  triggerSearch();
+                }}
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-white/80 p-1 rounded-full hover:bg-white/8 transition-transform duration-200 active:scale-95"
                 aria-label="AI Search"
-                type="button"
               >
                 <MagnifyingGlassIcon className={`h-4 w-4 ${isAiSearching ? 'animate-spin' : ''}`} />
               </button>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-xs text-white/80">
-                <span className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
-                <span>Incidents</span>
-              </div>
+
+            <div className="flex items-center gap-1 text-xs text-white/80">
+              <span className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+              <span>Incidents</span>
             </div>
           </div>
         </div>
       </header>
 
       <section className="flex-1 flex flex-col bg-gray-900 rounded-xl p-4 relative">
-        <SimulationCanvas 
+        <SimulationCanvas
           intersections={intersections}
           setIntersections={setIntersections}
           cars={cars}
@@ -173,13 +176,12 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
           highlightedIntersectionId={highlightedIntersectionId}
         />
 
-        <div className="absolute right-6 bottom-6 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-xl p-2 shadow-lg transition-all duration-300">
+        <div className="absolute right-6 bottom-6 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-xl p-2 shadow-lg">
           <button
             onClick={toggleRunning}
             className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-transform duration-200 ${
               isRunning ? 'bg-red-600 hover:scale-105' : 'bg-green-600 hover:scale-105'
             }`}
-            aria-label={isRunning ? 'Pause simulation' : 'Start simulation'}
             type="button"
           >
             {isRunning ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
@@ -188,8 +190,7 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
 
           <button
             onClick={() => setViewMode(viewMode === 'GRID' ? 'SATELLITE' : 'GRID')}
-            className="p-2 rounded-md text-white/90 hover:bg-white/6 transition-transform duration-200"
-            title="Toggle view"
+            className="p-2 rounded-md text-white/90 hover:bg-white/6"
             type="button"
           >
             {viewMode === 'GRID' ? <MapIcon className="h-5 w-5" /> : <GlobeAsiaAustraliaIcon className="h-5 w-5" />}
@@ -197,44 +198,21 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
 
           <button
             onClick={() => setCvModeActive(!cvModeActive)}
-            className={`p-2 rounded-md transition-all duration-200 ${cvModeActive ? 'bg-yellow-400 text-black shadow-xl scale-105' : 'hover:bg-white/6'}`}
-            title="Toggle CV Mode"
+            className={`p-2 rounded-md transition-all ${
+              cvModeActive ? 'bg-yellow-400 text-black shadow-xl scale-105' : 'hover:bg-white/6'
+            }`}
             type="button"
           >
             <CpuChipIcon className="h-5 w-5" />
           </button>
 
           <Tooltip text="View detailed stats">
-            <button className="p-2 rounded-md hover:bg-white/6 transition-colors duration-200" type="button">
+            <button className="p-2 rounded-md hover:bg-white/6" type="button">
               <Squares2X2Icon className="h-5 w-5 text-white/90" />
             </button>
           </Tooltip>
         </div>
-
-        <div className="mt-4 flex justify-between items-center">
-          <div className="hidden sm:block">
-            <Tooltip text="View detailed stats">
-              <button className="btn-secondary" type="button">Stats</button>
-            </Tooltip>
-          </div>
-        </div>
       </section>
-
-      <style jsx>{`
-        .gradient-anim {
-          background-size: 200% 200%;
-          animation: gradientShift 6s ease infinite;
-        }
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .pulse-glow {
-          box-shadow: 0 6px 30px rgba(99, 102, 241, 0.12), 0 2px 10px rgba(99, 102, 241, 0.08);
-          transform: translateY(-2px);
-        }
-      `}</style>
     </main>
   );
 };
