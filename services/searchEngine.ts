@@ -67,7 +67,9 @@ export class BharatFlowSearchEngine implements SearchEngine {
     // Implement LRU cache behavior
     if (cache.size >= this.CACHE_SIZE) {
       const firstKey = cache.keys().next().value;
-      cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        cache.delete(firstKey);
+      }
     }
     cache.set(key, value);
   }
