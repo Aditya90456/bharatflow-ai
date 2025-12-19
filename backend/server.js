@@ -1,11 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import compression from 'compression';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
-import mongoose from './database/mongooseConnection';
-import vehicleRoutes from './routes/vehicleRoutes';
+import { initializeDatabase, DatabaseService } from './database.js';
+import vehicleRoutes from './routes/vehicleRoutes.js';
 
 // Load environment variables from .env.local in the root directory
 dotenv.config({ path: '../.env.local' });
@@ -65,11 +64,77 @@ Output concise, authoritative traffic directives.
 Use Indian English terminology (e.g., "Junction", "Signal", "Gridlock").
 `;
 
+// Fallback analysis when AI is unavailable
+function generateFallbackAnalysis(congestedIntersections, stats) {
+    const topCongested = congestedIntersections
+        .sort((a, b) => (b.nsQueue + b.ewQueue) - (a.nsQueue + a.ewQueue))
+        .slice(0, 2);
+    
+    let analysis = "Traffic analysis unavailable - using basic heuristics. ";
+    if (stats.congestionLevel > 70) {
+        analysis += "High congestion detected across the grid.";
+    } else if (stats.congestionLevel > 40) {
+        analysis += "Moderate congestion levels observed.";
+    } else {
+        analysis += "Traffic flow is relatively smooth.";
+    }
+    
+    const suggestedChanges = topCongested.map(junction => {
+        const totalQueue = junction.nsQueue + junction.ewQueue;
+        let newDuration = 150; // Default
+        
+        if (totalQueue > 20) {
+            newDuration = Math.min(250, 150 + (totalQueue * 2));
+        } else if (totalQueue < 5) {
+            newDuration = Math.max(100, 150 - 20);
+        }
+        
+        return {
+            intersectionId: junction.id,
+            newGreenDuration: newDuration,
+            reason: `Heuristic adjustment based on queue length (${totalQueue} vehicles)`
+        };
+    }).filter(change => change.newGreenDuration !== 150);
+    
+    return { analysis, suggestedChanges };
+}
+
 // --- API Endpoints ---
 
-// Helper function for Gemini calls
+// Rate limiting for API calls
+const apiCallTracker = {
+    calls: [],
+    maxCallsPerMinute: 15, // Conservative limit to avoid quota issues
+    
+    canMakeCall() {
+        const now = Date.now();
+        const oneMinuteAgo = now - 60000;
+        
+        // Remove calls older than 1 minute
+        this.calls = this.calls.filter(time => time > oneMinuteAgo);
+        
+        return this.calls.length < this.maxCallsPerMinute;
+    },
+    
+    recordCall() {
+        this.calls.push(Date.now());
+    }
+};
+
+// Helper function for Gemini calls with rate limiting and better error handling
 async function callGemini(res, model, prompt, config) {
+    // Check rate limit
+    if (!apiCallTracker.canMakeCall()) {
+        console.warn("API rate limit reached, rejecting request");
+        return res.status(429).json({ 
+            error: "API rate limit exceeded. Please try again in a moment.",
+            retryAfter: 60 
+        });
+    }
+
     try {
+        apiCallTracker.recordCall();
+        
         const response = await ai.models.generateContent({
             model,
             contents: prompt,
@@ -106,7 +171,29 @@ async function callGemini(res, model, prompt, config) {
         throw new Error("Empty response from Gemini API");
     } catch (error) {
         console.error("Gemini API call failed:", error);
-        res.status(500).json({ error: "An error occurred while communicating with the AI model." });
+        
+        // Handle specific quota exceeded error
+        if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('RATE_LIMIT_EXCEEDED')) {
+            return res.status(429).json({ 
+                error: "API quota exceeded. Please try again later or use a different API key.",
+                details: "The Gemini API quota has been exceeded. Consider upgrading your quota or trying again later.",
+                retryAfter: 3600 // Suggest retry after 1 hour
+            });
+        }
+        
+        // Handle other API errors
+        if (error.status >= 400 && error.status < 500) {
+            return res.status(error.status).json({ 
+                error: "API request failed",
+                details: error.message 
+            });
+        }
+        
+        // Generic error
+        res.status(500).json({ 
+            error: "An error occurred while communicating with the AI model.",
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 }
 
@@ -114,6 +201,17 @@ async function callGemini(res, model, prompt, config) {
 app.post('/api/analyze-traffic', async (req, res) => {
     const { congestedIntersections, stats } = req.body;
     if (!congestedIntersections || !stats) return res.status(400).json({ error: 'Missing required payload.' });
+    
+    // Check if AI is available and within rate limits
+    if (!apiCallTracker.canMakeCall()) {
+        console.log("Using fallback analysis due to rate limiting");
+        const fallbackResult = generateFallbackAnalysis(congestedIntersections, stats);
+        return res.json({
+            ...fallbackResult,
+            fallback: true,
+            message: "AI temporarily unavailable - using heuristic analysis"
+        });
+    }
     
     const prompt = `
       Analyze this traffic snapshot.
@@ -153,7 +251,18 @@ app.post('/api/analyze-traffic', async (req, res) => {
         }
     };
     
-    await callGemini(res, 'gemini-2.5-flash', prompt, config);
+    // Try AI first, fallback on error
+    try {
+        await callGemini(res, 'gemini-2.5-flash', prompt, config);
+    } catch (error) {
+        console.log("AI failed, using fallback analysis:", error.message);
+        const fallbackResult = generateFallbackAnalysis(congestedIntersections, stats);
+        res.json({
+            ...fallbackResult,
+            fallback: true,
+            message: "AI unavailable - using heuristic analysis"
+        });
+    }
 });
 
 app.post('/api/analyze-junction', async (req, res) => {
@@ -764,12 +873,162 @@ app.get('/api/search/analytics', (req, res) => {
     }
 });
 
+// --- Health Check Endpoints ---
+
+// API health check
+app.get('/api/health', (req, res) => {
+    const canMakeAICall = apiCallTracker.canMakeCall();
+    const recentCalls = apiCallTracker.calls.length;
+    
+    res.json({
+        status: 'healthy',
+        database: 'sqlite',
+        ai: {
+            available: !!ai,
+            canMakeCall: canMakeAICall,
+            recentCalls: recentCalls,
+            maxCallsPerMinute: apiCallTracker.maxCallsPerMinute
+        },
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+    });
+});
+
+// AI status check
+app.get('/api/ai/status', (req, res) => {
+    const canMakeCall = apiCallTracker.canMakeCall();
+    const callsInLastMinute = apiCallTracker.calls.length;
+    const nextAvailableCall = canMakeCall ? 'now' : new Date(Math.max(...apiCallTracker.calls) + 60000).toISOString();
+    
+    res.json({
+        available: !!ai,
+        canMakeCall,
+        callsInLastMinute,
+        maxCallsPerMinute: apiCallTracker.maxCallsPerMinute,
+        nextAvailableCall,
+        fallbackMode: !canMakeCall
+    });
+});
+
 // --- Vehicle Routes ---
 app.use('/api/vehicles', vehicleRoutes);
 
-// Start the server
-app.listen(port, () => {
-  console.log(`BharatFlow AI Backend running at http://localhost:${port}`);
-  console.log(`ML API expected at http://localhost:5000`);
-  console.log(`Search Engine AI endpoints available at /api/search/*`);
+// --- Database Routes ---
+
+// Get dashboard statistics
+app.get('/api/dashboard/stats/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const stats = await DatabaseService.getDashboardStats(city);
+        res.json(stats);
+    } catch (error) {
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({ error: 'Failed to retrieve dashboard statistics' });
+    }
 });
+
+// Save traffic analytics
+app.post('/api/analytics/traffic', async (req, res) => {
+    try {
+        const { stats, city } = req.body;
+        await DatabaseService.saveTrafficAnalytics(stats, city);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Save analytics error:', error);
+        res.status(500).json({ error: 'Failed to save traffic analytics' });
+    }
+});
+
+// Get traffic analytics history
+app.get('/api/analytics/traffic/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const { hours = 24 } = req.query;
+        const analytics = await DatabaseService.getTrafficAnalytics(city, parseInt(hours));
+        res.json(analytics);
+    } catch (error) {
+        console.error('Get analytics error:', error);
+        res.status(500).json({ error: 'Failed to retrieve traffic analytics' });
+    }
+});
+
+// Save incident
+app.post('/api/incidents', async (req, res) => {
+    try {
+        const { incident, city } = req.body;
+        await DatabaseService.saveIncident(incident, city);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Save incident error:', error);
+        res.status(500).json({ error: 'Failed to save incident' });
+    }
+});
+
+// Get active incidents
+app.get('/api/incidents/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const incidents = await DatabaseService.getActiveIncidents(city);
+        res.json(incidents);
+    } catch (error) {
+        console.error('Get incidents error:', error);
+        res.status(500).json({ error: 'Failed to retrieve incidents' });
+    }
+});
+
+// Resolve incident
+app.patch('/api/incidents/:id/resolve', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await DatabaseService.resolveIncident(id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Resolve incident error:', error);
+        res.status(500).json({ error: 'Failed to resolve incident' });
+    }
+});
+
+// Log AI analysis
+app.post('/api/ai/log', async (req, res) => {
+    try {
+        const { city, analysisType, inputData, aiResponse, suggestionsApplied } = req.body;
+        await DatabaseService.logAIAnalysis(city, analysisType, inputData, aiResponse, suggestionsApplied);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Log AI analysis error:', error);
+        res.status(500).json({ error: 'Failed to log AI analysis' });
+    }
+});
+
+// Get AI analysis history
+app.get('/api/ai/history/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const { type, limit = 50 } = req.query;
+        const history = await DatabaseService.getAIAnalysisHistory(city, type, parseInt(limit));
+        res.json(history);
+    } catch (error) {
+        console.error('Get AI history error:', error);
+        res.status(500).json({ error: 'Failed to retrieve AI analysis history' });
+    }
+});
+
+// Initialize database and start server
+async function startServer() {
+    try {
+        await initializeDatabase();
+        console.log('✅ SQLite Database initialized successfully');
+        
+        app.listen(port, () => {
+            console.log(`🚀 BharatFlow AI Backend running at http://localhost:${port}`);
+            console.log(`🤖 ML API expected at http://localhost:5000`);
+            console.log(`🔍 Search Engine AI endpoints available at /api/search/*`);
+            console.log(`💾 Using SQLite database (No MongoDB required)`);
+        });
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+startServer();

@@ -1,33 +1,38 @@
 # BharatFlow AI - Backend Server
 
-This directory contains a Node.js Express server that acts as a secure backend for the BharatFlow application. It proxies requests to the Google Gemini API, protecting the API key and centralizing the AI logic.
+This directory contains a Node.js Express server that acts as a secure backend for the BharatFlow application. It uses **SQLite** as the database (no MongoDB required) and proxies requests to the Google Gemini API, protecting the API key and centralizing the AI logic.
 
 ## Features
 
--   **Secure API Proxy**: All calls to the Gemini API are routed through this server, preventing the API key from being exposed on the frontend.
--   **Centralized AI Logic**: Contains all the prompts and configurations for interacting with the Gemini models for various application features.
--   **Environment-based Configuration**: Uses a `.env` file for secure management of the API key.
+-   **SQLite Database**: Lightweight, file-based database that requires no separate server installation
+-   **Secure API Proxy**: All calls to the Gemini API are routed through this server, preventing the API key from being exposed on the frontend
+-   **Centralized AI Logic**: Contains all the prompts and configurations for interacting with the Gemini models for various application features
+-   **Environment-based Configuration**: Uses a `.env` file for secure management of the API key
+-   **No MongoDB Required**: Uses SQLite for all data persistence needs
+
+## Database
+
+**SQLite Database** - Lightweight, file-based database that requires no separate server installation.
+- Database file: `backend/bharatflow.db` (created automatically)
+- No MongoDB or external database server required
+- Includes tables for traffic analytics, incidents, AI analysis logs, and vehicle tracking
 
 ## Setup & Running
 
-1.  **Install Dependencies**: From the project root, run:
+1.  **Install Dependencies**: From the backend directory, run:
     ```bash
+    cd backend
     npm install
     ```
 
-2.  **Create Environment File**: Create a file named `.env` inside the `backend/` directory.
+2.  **Create Environment File**: The `.env.local` file already exists with the API key configured.
 
-3.  **Add API Key**: In the `backend/.env` file, add your Google Gemini API key:
-    ```
-    API_KEY=your_gemini_api_key_here
-    ```
-
-4.  **Start the Server**: From the project root, run the following command:
+3.  **Start the Server**: From the backend directory, run:
     ```bash
-    npm run start:backend
+    npm run dev
     ```
 
-The server will start on `http://localhost:3001`. The frontend application (when run with `npm run dev`) is configured to proxy API requests to this server.
+The server will start on `http://localhost:3001` and automatically initialize the SQLite database. No MongoDB installation required!
 
 ## Endpoints
 

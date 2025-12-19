@@ -20,6 +20,7 @@ import { VehicleDetails } from './components/VehicleDetails';
 import { IntersectionDetails, IntelFeed, IncidentDetails, OverviewPanel } from './components/SidePanels';
 import { ResponsibleAiModal } from './components/ResponsibleAiModal';
 import { DataHub } from './components/DataHub';
+import { Navbar } from './components/Navbar';
 import { analyzeTraffic, analyzeIncident, getRealWorldIntel, interpretSearchQuery } from './services/geminiService';
 import { Incident, Intersection, Car, LightState, TrafficStats, GeminiAnalysis, GeminiIncidentAnalysis, RealWorldIntel, Road, SearchResult, CongestedJunctionInfo, VehicleType, AiSearchAction } from './types';
 import { GRID_SIZE, INITIAL_GREEN_DURATION, CITY_CONFIGS, CITY_COORDINATES, BLOCK_SIZE, ROAD_NAMES, MAX_SPEED } from './constants';
@@ -31,163 +32,9 @@ import {
 type ViewState = 'LANDING' | 'DASHBOARD' | 'FEATURES' | 'PUBLIC_MAP' | 'PUBLIC_DATA' | 'API_DOCS' | 'AI_FEATURES' | 'REALTIME_AI' | 'JUNCTIONS_AI' | 'ML_DESIGN' | 'HLD';
 type ActiveTab = 'OVERVIEW' | 'JUNCTION' | 'UNIT' | 'INTEL' | 'CCTV' | 'INCIDENT' | 'DATA_HUB';
 
-// Enhanced Boot Sequence Component with optimized loading
-const SystemBoot: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
-  const [lines, setLines] = useState<string[]>([]);
-  const [progress, setProgress] = useState(0);
-  const [currentSystem, setCurrentSystem] = useState('');
-  
-  const bootLogs = useMemo(() => [
-    { text: "INITIALIZING BHARATFLOW KERNEL v5.0.0...", system: "CORE", delay: 200 },
-    { text: "ESTABLISHING QUANTUM LINK... [OK]", system: "NETWORK", delay: 250 },
-    { text: "LOADING NEURAL TOPOLOGY: BANGALORE (TESTBED)", system: "AI", delay: 300 },
-    { text: "SYNCING WITH IoT SENSOR GRID: 99.8% COMPLETE", system: "SENSORS", delay: 350 },
-    { text: "CALIBRATING LHT PHYSICS ENGINE...", system: "PHYSICS", delay: 250 },
-    { text: "STARTING AI TACTICAL ENGINE (GEMINI-2.5)...", system: "AI", delay: 400 },
-    { text: "HOLOGRAPHIC INTERFACE READY...", system: "UI", delay: 200 },
-    { text: "SYSTEM READY. COMMAND AWAITED.", system: "READY", delay: 300 }
-  ], []);
 
-  useEffect(() => {
-    let delay = 0;
-    const timeouts: NodeJS.Timeout[] = [];
-    
-    bootLogs.forEach((log, index) => {
-      delay += log.delay + Math.random() * 100; // Reduced randomness for faster loading
-      const timeout = setTimeout(() => {
-        setLines(prev => [...prev, log.text]);
-        setCurrentSystem(log.system);
-        setProgress(((index + 1) / bootLogs.length) * 100);
-        if (index === bootLogs.length - 1) {
-          const finalTimeout = setTimeout(onComplete, 800); // Reduced final delay
-          timeouts.push(finalTimeout);
-        }
-      }, delay);
-      timeouts.push(timeout);
-    });
-
-    // Cleanup function to prevent memory leaks
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout));
-    };
-  }, [onComplete, bootLogs]);
-
-  return (
-    <div className="fixed inset-0 bg-background z-50 flex items-center justify-center font-mono overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-cyber-grid opacity-30"></div>
-      <div className="scanline-effect"></div>
-      <div className="scanline-horizontal"></div>
-      
-      {/* Main Boot Interface */}
-      <div className="relative w-full max-w-4xl mx-auto p-8">
-        {/* Header */}
-        <div className="cyber-glass rounded-2xl p-8 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-primary-500 flex items-center justify-center animate-pulse-glow">
-                <GlobeAltIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-display font-bold holographic">BHARATFLOW</h1>
-                <p className="text-cyan-400 text-sm font-tech">NEURAL TRAFFIC CONTROL SYSTEM</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-cyan-400 font-tech text-sm">SYSTEM STATUS</div>
-              <div className="text-success-400 font-bold animate-pulse-glow">{currentSystem}</div>
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex justify-between text-xs text-muted mb-2">
-              <span>INITIALIZATION PROGRESS</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <div className="h-2 bg-surface rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-cyan-500 to-primary-500 transition-all duration-500 ease-out relative"
-                style={{ width: `${progress}%` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-data-flow"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Boot Log Terminal */}
-        <div className="cyber-glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-cyan-500/20">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-success-400 animate-pulse-glow"></div>
-              <span className="text-cyan-400 font-tech text-sm">BOOT_SEQUENCE</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full bg-primary-400 animate-pulse-glow"></div>
-              <span className="text-cyan-400 font-tech text-sm">SECURE_CONN</span>
-            </div>
-          </div>
-          
-          <div className="space-y-2 max-h-64 overflow-hidden">
-            {lines.map((line, i) => (
-              <div 
-                key={i} 
-                className="flex items-center space-x-2 animate-fade-in"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              >
-                <span className="text-cyan-400 font-mono text-xs">[{String(i + 1).padStart(2, '0')}]</span>
-                <p className="font-mono text-sm text-foreground overflow-hidden whitespace-nowrap animate-boot-text">
-                  &gt; {line}
-                  {i === lines.length - 1 && (
-                    <span className="inline-block w-2 h-4 bg-cyan-400 ml-1 animate-blink"></span>
-                  )}
-                </p>
-              </div>
-            ))}
-          </div>
-          
-          {/* System Indicators */}
-          <div className="mt-6 pt-4 border-t border-cyan-500/20">
-            <div className="grid grid-cols-4 gap-4">
-              {['CORE', 'NETWORK', 'AI', 'SENSORS'].map((system, i) => (
-                <div key={system} className="text-center">
-                  <div className={`w-8 h-8 mx-auto rounded-full border-2 flex items-center justify-center mb-2 transition-all duration-300 ${
-                    currentSystem === system || progress > (i + 1) * 25
-                      ? 'border-success-400 bg-success-400/20 text-success-400 animate-pulse-glow' 
-                      : 'border-muted text-muted'
-                  }`}>
-                    <div className="w-2 h-2 rounded-full bg-current"></div>
-                  </div>
-                  <div className="text-xs font-tech text-muted">{system}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        
-        {/* Loading Animation */}
-        <div className="mt-6 text-center">
-          <div className="inline-flex items-center space-x-2 text-cyan-400">
-            <div className="flex space-x-1">
-              {[0, 1, 2].map((i) => (
-                <div 
-                  key={i}
-                  className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse-glow"
-                  style={{ animationDelay: `${i * 0.2}s` }}
-                ></div>
-              ))}
-            </div>
-            <span className="font-tech text-sm">LOADING NEURAL INTERFACE</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const App: React.FC = () => {
-  const [isBooting, setIsBooting] = useState(true);
   const [viewState, setViewState] = useState<ViewState>('LANDING');
 
   const [currentCity, setCurrentCity] = useState("Bangalore");
@@ -317,8 +164,8 @@ export const App: React.FC = () => {
     setQueueLengthMap(queueMap);
   }, [incidents.length]);
 
-  const handleNavigate = (page: ViewState) => {
-    setViewState(page);
+  const handleNavigate = (page: string) => {
+    setViewState(page as ViewState);
   };
   
   const handleIntersectionSelect = (id: string) => {
@@ -542,9 +389,7 @@ export const App: React.FC = () => {
     );
   };
   
-  if (isBooting) {
-    return <SystemBoot onComplete={() => setIsBooting(false)} />;
-  }
+
 
   const publicPageProps = { onNavigate: handleNavigate as (page: string) => void };
   switch (viewState) {
@@ -563,29 +408,108 @@ export const App: React.FC = () => {
   return (
     <>
       <div className="animated-grid"></div>
-      <div className="w-screen h-screen font-sans flex p-3 gap-3 overflow-hidden text-gray-200">
-        {/* LEFT PANEL */}
-        <div className="w-[300px] flex flex-col gap-3 flex-shrink-0">
-            <header className="h-20 flex-shrink-0 flex items-center justify-between p-4 rounded-2xl glass">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNavigate('LANDING')}>
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-saffron to-red-600 flex items-center justify-center shadow-lg shadow-saffron/20">
-                      <GlobeAltIcon className="w-6 h-6 text-white" />
+      <Navbar 
+        onNavigate={handleNavigate}
+        showSearch={true}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={handleAiSearch}
+        isSearching={isAiSearching}
+      />
+      <div className="w-screen h-screen font-sans flex p-3 gap-3 overflow-hidden text-gray-200 pt-16">
+        {/* LEFT PANEL - PREMIUM GOVERNMENT DESIGN */}
+        <div className="w-[320px] flex flex-col gap-4 flex-shrink-0">
+            <header className="h-24 flex-shrink-0 flex items-center justify-between p-6 rounded-3xl bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-indigo-900/95 backdrop-blur-xl border border-white/10 shadow-2xl shadow-blue-500/20 relative overflow-hidden">
+              {/* Animated Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-r from-saffron/5 via-transparent to-green-500/5 animate-pulse"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-saffron via-white to-green-500"></div>
+              
+              <div className="flex items-center gap-4 cursor-pointer relative z-10" onClick={() => handleNavigate('LANDING')}>
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-saffron via-orange-500 to-red-600 flex items-center justify-center shadow-2xl shadow-saffron/40 relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <GlobeAltIcon className="w-7 h-7 text-white relative z-10 drop-shadow-lg" />
                   </div>
-                  <div>
-                      <span className="text-lg font-tech font-bold tracking-widest leading-none text-white">BHARAT<span className="text-saffron">FLOW</span></span>
-                      <span className="text-[10px] font-mono text-accent tracking-wider">AI COMMAND</span>
+                  <div className="flex flex-col">
+                      <span className="text-xl font-display font-black tracking-wider leading-none text-white drop-shadow-lg">
+                        BHARAT<span className="text-saffron animate-pulse">FLOW</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-cyan-300 tracking-[0.2em] uppercase opacity-90">
+                        🇮🇳 AI Command Center
+                      </span>
                   </div>
               </div>
-              <button onClick={() => handleNavigate('LANDING')} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                  <ArrowLeftOnRectangleIcon className="w-5 h-5 text-gray-400" />
+              <button onClick={() => handleNavigate('LANDING')} className="p-3 rounded-2xl hover:bg-white/10 transition-all duration-300 hover:scale-110 relative z-10">
+                  <ArrowLeftOnRectangleIcon className="w-6 h-6 text-white/80 hover:text-white" />
               </button>
            </header>
 
-           <div className="grid grid-cols-2 gap-3">
-               <StatsCard label="Active Units" value={stats.totalCars} icon={<TruckIcon className="w-5 h-5"/>} color="primary" />
-               <StatsCard label="Avg. Speed" value={stats.avgSpeed.toFixed(1)} unit="px/f" icon={<BoltIcon className="w-5 h-5"/>} color="accent" />
-               <StatsCard label="Congestion" value={`${stats.congestionLevel}%`} icon={<SignalIcon className="w-5 h-5"/>} color={stats.congestionLevel > 70 ? 'danger' : stats.congestionLevel > 40 ? 'warning' : 'success'}/>
-               <StatsCard label="Incidents" value={stats.incidents} icon={<ExclamationTriangleIcon className="w-5 h-5"/>} color="saffron"/>
+           {/* PREMIUM STATS GRID */}
+           <div className="grid grid-cols-2 gap-4">
+               <div className="bg-gradient-to-br from-blue-900/40 via-indigo-900/30 to-purple-900/40 backdrop-blur-xl rounded-2xl p-4 border border-blue-400/20 shadow-xl hover:shadow-blue-500/20 transition-all duration-300 group relative overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                 <div className="flex items-center justify-between relative z-10">
+                   <div>
+                     <p className="text-blue-300 text-xs font-mono uppercase tracking-wider mb-1">Active Units</p>
+                     <p className="text-2xl font-black text-white">{stats.totalCars}</p>
+                   </div>
+                   <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                     <TruckIcon className="w-5 h-5 text-blue-400"/>
+                   </div>
+                 </div>
+               </div>
+               
+               <div className="bg-gradient-to-br from-emerald-900/40 via-green-900/30 to-teal-900/40 backdrop-blur-xl rounded-2xl p-4 border border-emerald-400/20 shadow-xl hover:shadow-emerald-500/20 transition-all duration-300 group relative overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                 <div className="flex items-center justify-between relative z-10">
+                   <div>
+                     <p className="text-emerald-300 text-xs font-mono uppercase tracking-wider mb-1">Avg Speed</p>
+                     <p className="text-2xl font-black text-white">{stats.avgSpeed.toFixed(1)}<span className="text-sm text-emerald-300 ml-1">km/h</span></p>
+                   </div>
+                   <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                     <BoltIcon className="w-5 h-5 text-emerald-400"/>
+                   </div>
+                 </div>
+               </div>
+               
+               <div className={`bg-gradient-to-br backdrop-blur-xl rounded-2xl p-4 border shadow-xl transition-all duration-300 group relative overflow-hidden ${
+                 stats.congestionLevel > 70 
+                   ? 'from-red-900/40 via-rose-900/30 to-pink-900/40 border-red-400/20 hover:shadow-red-500/20' 
+                   : stats.congestionLevel > 40 
+                   ? 'from-amber-900/40 via-yellow-900/30 to-orange-900/40 border-amber-400/20 hover:shadow-amber-500/20'
+                   : 'from-green-900/40 via-emerald-900/30 to-teal-900/40 border-green-400/20 hover:shadow-green-500/20'
+               }`}>
+                 <div className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                   stats.congestionLevel > 70 ? 'from-red-500/10' : stats.congestionLevel > 40 ? 'from-amber-500/10' : 'from-green-500/10'
+                 } to-transparent`}></div>
+                 <div className="flex items-center justify-between relative z-10">
+                   <div>
+                     <p className={`text-xs font-mono uppercase tracking-wider mb-1 ${
+                       stats.congestionLevel > 70 ? 'text-red-300' : stats.congestionLevel > 40 ? 'text-amber-300' : 'text-green-300'
+                     }`}>Congestion</p>
+                     <p className="text-2xl font-black text-white">{stats.congestionLevel}%</p>
+                   </div>
+                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                     stats.congestionLevel > 70 ? 'bg-red-500/20' : stats.congestionLevel > 40 ? 'bg-amber-500/20' : 'bg-green-500/20'
+                   }`}>
+                     <SignalIcon className={`w-5 h-5 ${
+                       stats.congestionLevel > 70 ? 'text-red-400' : stats.congestionLevel > 40 ? 'text-amber-400' : 'text-green-400'
+                     }`}/>
+                   </div>
+                 </div>
+               </div>
+               
+               <div className="bg-gradient-to-br from-orange-900/40 via-red-900/30 to-rose-900/40 backdrop-blur-xl rounded-2xl p-4 border border-orange-400/20 shadow-xl hover:shadow-orange-500/20 transition-all duration-300 group relative overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                 <div className="flex items-center justify-between relative z-10">
+                   <div>
+                     <p className="text-orange-300 text-xs font-mono uppercase tracking-wider mb-1">Incidents</p>
+                     <p className="text-2xl font-black text-white">{stats.incidents}</p>
+                   </div>
+                   <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                     <ExclamationTriangleIcon className="w-5 h-5 text-orange-400"/>
+                   </div>
+                 </div>
+               </div>
            </div>
 
            {/* MAIN TABBED PANEL */}
@@ -630,10 +554,6 @@ export const App: React.FC = () => {
               selectedIncidentId={selectedIncidentId}
               closedRoads={new Set(incidents.filter(i => i.blocksSegmentId).map(i => i.blocksSegmentId!))}
               roads={roads}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              isAiSearching={isAiSearching}
-              handleAiSearch={handleAiSearch}
               highlightedVehicleIds={highlightedVehicleIds}
               highlightedIncidentIds={highlightedIncidentIds}
               highlightedIntersectionId={highlightedIntersectionId}

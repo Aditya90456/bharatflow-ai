@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { GlobeAltIcon, ArrowRightIcon, CpuChipIcon, SparklesIcon, ServerStackIcon, CameraIcon, ShieldCheckIcon, SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { GlobeAltIcon, ArrowRightIcon, CpuChipIcon, SparklesIcon, ServerStackIcon, ShieldCheckIcon, SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/outline';
+import { Navbar } from './Navbar';
 
 interface LandingPageProps {
   onNavigate: (page: string) => void;
@@ -29,7 +30,7 @@ const InteractiveGlobe: React.FC<{ isQuietMode: boolean }> = ({ isQuietMode }) =
     { name: 'CHE', lat: 13.0, lng: 80.2, size: 5 },
   ];
 
-  const arcs = [ [0,1], [1,2], [2,4], [4,3], [3,0], [0,2] ];
+
 
   return (
     <div className="relative w-full h-[500px] flex items-center justify-center group">
@@ -86,6 +87,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   return (
     <div className="bg-background text-white font-sans overflow-x-hidden selection:bg-accent selection:text-black">
       
+      {/* Navigation */}
+      <Navbar onNavigate={onNavigate} />
+      
       {/* --- AMBIENT BACKGROUND FX --- */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="animated-grid opacity-70"></div>
@@ -94,7 +98,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
       </div>
       
       {/* --- HERO SECTION --- */}
-      <main className="relative min-h-screen flex items-center justify-center p-6 z-10 overflow-hidden">
+      <main className="relative min-h-screen flex items-center justify-center p-6 z-10 overflow-hidden pt-20">
         
         <button 
           onClick={() => setIsQuietMode(!isQuietMode)}

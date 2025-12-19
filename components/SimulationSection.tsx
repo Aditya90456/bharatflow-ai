@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { SimulationCanvas } from './SimulationCanvas'; 
-import { Intersection, Car, Incident, Road, SearchResult } from '../types';
+import { Intersection, Car, Incident, Road } from '../types';
 import {
   PlayIcon,
   PauseIcon,
   GlobeAsiaAustraliaIcon,
   Squares2X2Icon,
   CpuChipIcon,
-  MagnifyingGlassIcon,
   MapIcon,
 } from '@heroicons/react/24/outline';
 import { Tooltip } from './Tooltip';
@@ -35,10 +34,6 @@ interface SimulationSectionProps {
   selectedIncidentId: string | null;
   closedRoads: Set<string>;
   roads: Road[];
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  isAiSearching: boolean;
-  handleAiSearch: (query: string) => void;
   highlightedVehicleIds: Set<string> | null;
   highlightedIncidentIds: Set<string> | null;
   highlightedIntersectionId?: string | null;
@@ -67,15 +62,10 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
   selectedIncidentId,
   closedRoads,
   roads,
-  searchQuery,
-  setSearchQuery,
-  isAiSearching,
-  handleAiSearch,
   highlightedVehicleIds,
   highlightedIncidentIds,
   highlightedIntersectionId,
 }) => {
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [headerPulse, setHeaderPulse] = useState(false);
 
   useEffect(() => {
@@ -86,60 +76,47 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
 
   const toggleRunning = () => setIsRunning(!isRunning);
 
-  const triggerSearch = () => {
-    if (!searchQuery.trim()) return;
-    handleAiSearch(searchQuery);
-    setIsSearchFocused(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      triggerSearch();
-    }
-  };
-
   return (
-    <main className="absolute inset-0 flex flex-col min-w-0 glass rounded-2xl p-1.5 overflow-hidden transition-all duration-300">
-      <header className={`h-16 shadow-md flex items-center px-6 transition-all duration-500 ${headerPulse ? 'pulse-glow' : ''}`}>
-        <div className="flex items-center gap-4 w-full">
-          <div className="flex items-center gap-3">
-            <div className="text-white text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent gradient-anim">
-              Traffic Simulation
+    <main className="absolute inset-0 flex flex-col min-w-0 bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-indigo-900/95 backdrop-blur-xl rounded-3xl p-2 overflow-hidden transition-all duration-300 border border-white/10 shadow-2xl">
+      {/* Premium Header with Indian Government Aesthetics */}
+      <header className={`h-20 flex items-center px-8 transition-all duration-500 relative overflow-hidden ${headerPulse ? 'pulse-glow' : ''}`}>
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 bg-gradient-to-r from-saffron/10 via-transparent to-green-500/10 animate-pulse"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-saffron via-white to-green-500"></div>
+        
+        <div className="flex items-center gap-6 w-full relative z-10">
+          <div className="flex items-center gap-4">
+            {/* Premium Title with Government Branding */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-saffron via-orange-500 to-red-600 flex items-center justify-center shadow-2xl shadow-saffron/40 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                <MapIcon className="w-7 h-7 text-white relative z-10 drop-shadow-lg" />
+              </div>
+              <div className="flex flex-col">
+                <div className="text-2xl font-display font-black tracking-wider leading-none text-white drop-shadow-lg bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent">
+                  NEURAL TRAFFIC GRID
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-cyan-300 font-mono tracking-wider">🇮🇳 {currentCity} Command Center</span>
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-white/70">• {currentCity}</div>
           </div>
 
-          <div className="ml-auto flex items-center gap-3">
-            <div className="relative">
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search city, intersection, road..."
-                className={`transition-all duration-300 text-sm rounded-full px-3 py-2 placeholder:text-white/60 bg-white/6 text-white outline-none focus:ring-2 focus:ring-blue-400 ${
-                  isSearchFocused ? 'w-64 shadow-lg scale-105' : 'w-40'
-                }`}
-              />
+          <div className="ml-auto flex items-center gap-4">
 
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault(); // 🔑 prevents blur race
-                  triggerSearch();
-                }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 text-white/80 p-1 rounded-full hover:bg-white/8 transition-transform duration-200 active:scale-95"
-                aria-label="AI Search"
-              >
-                <MagnifyingGlassIcon className={`h-4 w-4 ${isAiSearching ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1 text-xs text-white/80">
-              <span className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
-              <span>Incidents</span>
+            {/* Status Indicators */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 backdrop-blur-sm">
+                <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse shadow-lg shadow-red-400/50"></div>
+                <span className="text-red-300 text-xs font-mono font-medium">INCIDENTS</span>
+              </div>
+              
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/20 border border-green-500/30 backdrop-blur-sm">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <span className="text-green-300 text-xs font-mono font-medium">LIVE</span>
+              </div>
             </div>
           </div>
         </div>
