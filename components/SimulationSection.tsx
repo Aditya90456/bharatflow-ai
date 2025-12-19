@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SimulationCanvas } from './SimulationCanvas'; 
-import { TrafficStats, Intersection, Car, Incident, Road, SearchResult } from '../types';
+import { Intersection, Car, Incident, Road, SearchResult } from '../types';
 import {
   PlayIcon,
   PauseIcon,
@@ -25,7 +25,6 @@ interface SimulationSectionProps {
   onCarSelect: (id: string) => void;
   selectedCarId: string | null;
   viewMode: 'GRID' | 'SATELLITE';
-  setViode: 'GRID' | 'SATELLITE';
   setViewMode: (mode: 'GRID' | 'SATELLITE') => void;
   cvModeActive: boolean;
   setCvModeActive: (active: boolean) => void;
@@ -59,7 +58,6 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
   onIntersectionSelect,
   onCarSelect,
   selectedCarId,
-  stats,
   viewMode,
   setViewMode,
   cvModeActive,

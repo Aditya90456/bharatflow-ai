@@ -619,7 +619,6 @@ export const App: React.FC = () => {
               onIntersectionSelect={handleIntersectionSelect}
               onCarSelect={handleCarSelect}
               selectedCarId={selectedCarId}
-              stats={stats}
               viewMode={viewMode}
               setViewMode={setViewMode}
               cvModeActive={cvModeActive}
