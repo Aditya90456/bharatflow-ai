@@ -10,8 +10,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react({
-        // Enable Fast Refresh for better development experience
-        fastRefresh: true,
         // Optimize JSX runtime
         jsxRuntime: 'automatic'
       })

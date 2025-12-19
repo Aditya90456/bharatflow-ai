@@ -37,8 +37,6 @@ interface SimulationSectionProps {
   roads: Road[];
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  searchResults: SearchResult[];
-  onSearchResultSelect: (result: SearchResult) => void;
   isAiSearching: boolean;
   handleAiSearch: (query: string) => void;
   highlightedVehicleIds: Set<string> | null;
@@ -71,8 +69,6 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
   roads,
   searchQuery,
   setSearchQuery,
-  searchResults,
-  onSearchResultSelect,
   isAiSearching,
   handleAiSearch,
   highlightedVehicleIds,

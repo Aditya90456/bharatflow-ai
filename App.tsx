@@ -632,8 +632,6 @@ export const App: React.FC = () => {
               roads={roads}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              searchResults={searchResults}
-              onSearchResultSelect={handleSearchResultSelect}
               isAiSearching={isAiSearching}
               handleAiSearch={handleAiSearch}
               highlightedVehicleIds={highlightedVehicleIds}
