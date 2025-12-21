@@ -31,7 +31,7 @@ export interface OSMSearchOptions {
 export class OSMLocationService {
   private readonly NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
   private readonly OVERPASS_BASE_URL = 'https://overpass-api.de/api/interpreter';
-  private cache = new Map<string, OSMLocation[]>();
+  private cache = new Map<string, { data: OSMLocation[]; timestamp: number }>();
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
   private lastRequestTime = 0;
   private readonly MIN_REQUEST_INTERVAL = 1000; // 1 second between requests (Nominatim policy)

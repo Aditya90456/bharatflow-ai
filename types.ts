@@ -141,7 +141,7 @@ export interface SearchContext {
 
 export interface SearchResultItem {
   id: string;
-  type: 'intersection' | 'vehicle' | 'incident' | 'historical' | 'system';
+  type: 'intersection' | 'vehicle' | 'incident' | 'historical' | 'system' | 'location';
   title: string;
   description: string;
   relevanceScore: number;
