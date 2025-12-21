@@ -142,3 +142,6 @@ If you continue to experience issues:
 - [Gemini API Pricing](https://ai.google.dev/pricing)
 - [Quota Management](https://cloud.google.com/docs/quotas)
 - [API Key Management](https://aistudio.google.com/app/apikey)
+
+ '
+ 

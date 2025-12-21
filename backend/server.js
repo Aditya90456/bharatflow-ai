@@ -5,6 +5,10 @@ import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import { initializeDatabase, DatabaseService } from './database.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
+import liveLocationsRoutes from './routes/liveLocationsRoutes.js';
+import realTrafficService from './services/realTrafficService.js';
+import mapTilesService from './services/mapTilesService.js';
+import osmTilesService from './services/osmTilesService.js';
 
 // Load environment variables from .env.local in the root directory
 dotenv.config({ path: '../.env.local' });
@@ -18,20 +22,37 @@ if (!process.env.GEMINI_API_KEY && !process.env.API_KEY) {
 }
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
+const host = process.env.HOST || 'localhost';
+
+// Environment-based configuration
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Feature flags
+const features = {
+  realTraffic: process.env.REAL_TRAFFIC_ENABLED !== 'false',
+  aiAnalysis: process.env.AI_ANALYSIS_ENABLED !== 'false',
+  streaming: process.env.STREAMING_ENABLED !== 'false',
+  multiCity: process.env.MULTI_CITY_ENABLED !== 'false',
+  incidentTracking: process.env.INCIDENT_TRACKING_ENABLED !== 'false',
+  historicalAnalytics: process.env.HISTORICAL_ANALYTICS_ENABLED !== 'false'
+};
 
 // Optimize middleware for better performance
+const corsOrigin = process.env.CORS_ORIGIN || (isProduction ? false : true);
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? false : true, // Restrict CORS in production
+  origin: corsOrigin,
   credentials: true
 }));
 
 // Add compression middleware for better response times
 app.use(compression());
 
-// Use express.json() instead of body-parser for better performance
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Use express.json() with configurable limits
+const maxRequestSize = process.env.MAX_REQUEST_SIZE || '10mb';
+app.use(express.json({ limit: maxRequestSize }));
+app.use(express.urlencoded({ extended: true, limit: maxRequestSize }));
 
 // Add response caching headers for static content
 app.use((req, res, next) => {
@@ -104,7 +125,7 @@ function generateFallbackAnalysis(congestedIntersections, stats) {
 // Rate limiting for API calls
 const apiCallTracker = {
     calls: [],
-    maxCallsPerMinute: 15, // Conservative limit to avoid quota issues
+    maxCallsPerMinute: parseInt(process.env.TRAFFIC_RATE_LIMIT_PER_MINUTE) || 15,
     
     canMakeCall() {
         const now = Date.now();
@@ -910,8 +931,383 @@ app.get('/api/ai/status', (req, res) => {
     });
 });
 
+// --- OSM Tiles API Routes (Free, No API Key Required) ---
+
+// Get single OSM tile
+app.get('/api/osm/:provider/:zoom/:x/:y.png', async (req, res) => {
+    try {
+        const { provider, zoom, x, y } = req.params;
+        
+        const tileBuffer = await osmTilesService.getOSMTile(provider, parseInt(zoom), parseInt(x), parseInt(y));
+        
+        res.set({
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+            'Access-Control-Allow-Origin': '*'
+        });
+        
+        res.send(tileBuffer);
+    } catch (error) {
+        console.error('OSM tile error:', error);
+        res.status(500).json({ error: 'Failed to fetch OSM tile', details: error.message });
+    }
+});
+
+// Get multiple OSM tiles for a bounding box
+app.post('/api/osm/bounds', async (req, res) => {
+    try {
+        const { provider, zoom, bounds } = req.body;
+        
+        if (!provider || !zoom || !bounds) {
+            return res.status(400).json({ error: 'Missing required parameters: provider, zoom, bounds' });
+        }
+        
+        const tiles = await osmTilesService.getOSMTilesForBounds(provider, zoom, bounds);
+        
+        // Convert buffers to base64 for JSON response
+        const tilesData = tiles.map(tile => ({
+            x: tile.x,
+            y: tile.y,
+            data: tile.buffer ? tile.buffer.toString('base64') : null,
+            error: tile.error ? tile.error.message : null
+        }));
+        
+        res.json({
+            provider,
+            zoom,
+            bounds,
+            tiles: tilesData
+        });
+    } catch (error) {
+        console.error('OSM tiles bounds error:', error);
+        res.status(500).json({ error: 'Failed to fetch OSM tiles for bounds', details: error.message });
+    }
+});
+
+// Get available OSM providers
+app.get('/api/osm/providers', (req, res) => {
+    try {
+        const providers = osmTilesService.getAvailableProviders();
+        res.json(providers);
+    } catch (error) {
+        console.error('OSM providers error:', error);
+        res.status(500).json({ error: 'Failed to get OSM providers' });
+    }
+});
+
+// Get provider information
+app.get('/api/osm/providers/:provider', (req, res) => {
+    try {
+        const { provider } = req.params;
+        const providerInfo = osmTilesService.getProviderInfo(provider);
+        
+        if (!providerInfo) {
+            return res.status(404).json({ error: 'Provider not found' });
+        }
+        
+        res.json({
+            id: provider,
+            name: provider.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            ...providerInfo
+        });
+    } catch (error) {
+        console.error('OSM provider info error:', error);
+        res.status(500).json({ error: 'Failed to get provider information' });
+    }
+});
+
+// Get Indian city bounds and default zoom levels
+app.get('/api/osm/cities', (req, res) => {
+    try {
+        const cities = osmTilesService.getIndianCityBounds();
+        res.json(cities);
+    } catch (error) {
+        console.error('OSM cities error:', error);
+        res.status(500).json({ error: 'Failed to get city bounds' });
+    }
+});
+
+// Get tiles for a specific Indian city
+app.get('/api/osm/city/:cityName/:provider', async (req, res) => {
+    try {
+        const { cityName, provider } = req.params;
+        const { zoom } = req.query;
+        
+        const cities = osmTilesService.getIndianCityBounds();
+        const cityData = cities[cityName];
+        
+        if (!cityData) {
+            return res.status(404).json({ error: 'City not found' });
+        }
+        
+        const zoomLevel = zoom ? parseInt(zoom) : cityData.defaultZoom;
+        const tiles = await osmTilesService.getOSMTilesForBounds(provider, zoomLevel, cityData.bounds);
+        
+        // Convert buffers to base64 for JSON response
+        const tilesData = tiles.map(tile => ({
+            x: tile.x,
+            y: tile.y,
+            data: tile.buffer ? tile.buffer.toString('base64') : null,
+            error: tile.error ? tile.error.message : null
+        }));
+        
+        res.json({
+            city: cityName,
+            provider,
+            zoom: zoomLevel,
+            bounds: cityData.bounds,
+            tiles: tilesData
+        });
+    } catch (error) {
+        console.error('OSM city tiles error:', error);
+        res.status(500).json({ error: 'Failed to fetch city tiles', details: error.message });
+    }
+});
+
+// Generate tile URL for frontend use (no actual tile fetch)
+app.get('/api/osm/url/:provider/:zoom/:x/:y', (req, res) => {
+    try {
+        const { provider, zoom, x, y } = req.params;
+        const url = osmTilesService.getTileUrl(provider, zoom, x, y);
+        
+        if (!url) {
+            return res.status(404).json({ error: 'Provider not found' });
+        }
+        
+        res.json({ url });
+    } catch (error) {
+        console.error('OSM URL generation error:', error);
+        res.status(500).json({ error: 'Failed to generate tile URL' });
+    }
+});
+
+// --- Map Tiles API Routes ---
+
+// Get single map tile
+app.get('/api/tiles/:tileset/:zoom/:x/:y.:format', async (req, res) => {
+    try {
+        const { tileset, zoom, x, y, format } = req.params;
+        
+        const tileBuffer = await mapTilesService.getMapTile(tileset, parseInt(zoom), parseInt(x), parseInt(y), format);
+        
+        // Set appropriate content type
+        const contentType = format === 'png' ? 'image/png' : 
+                           format === 'jpg' || format === 'jpeg' ? 'image/jpeg' :
+                           format === 'webp' ? 'image/webp' : 'application/octet-stream';
+        
+        res.set({
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
+            'Access-Control-Allow-Origin': '*'
+        });
+        
+        res.send(tileBuffer);
+    } catch (error) {
+        console.error('Map tile error:', error);
+        res.status(500).json({ error: 'Failed to fetch map tile' });
+    }
+});
+
+// Get multiple tiles for a bounding box
+app.post('/api/tiles/bounds', async (req, res) => {
+    try {
+        const { tileset, zoom, bounds, format = 'png' } = req.body;
+        
+        if (!tileset || !zoom || !bounds) {
+            return res.status(400).json({ error: 'Missing required parameters: tileset, zoom, bounds' });
+        }
+        
+        const tiles = await mapTilesService.getTilesForBounds(tileset, zoom, bounds, format);
+        
+        // Convert buffers to base64 for JSON response
+        const tilesData = tiles.map(tile => ({
+            x: tile.x,
+            y: tile.y,
+            data: tile.buffer ? tile.buffer.toString('base64') : null,
+            error: tile.error ? tile.error.message : null
+        }));
+        
+        res.json({
+            tileset,
+            zoom,
+            bounds,
+            format,
+            tiles: tilesData
+        });
+    } catch (error) {
+        console.error('Tiles bounds error:', error);
+        res.status(500).json({ error: 'Failed to fetch tiles for bounds' });
+    }
+});
+
+// Get available tilesets
+app.get('/api/tiles/tilesets', (req, res) => {
+    try {
+        const tilesets = mapTilesService.getAvailableTilesets();
+        res.json(tilesets);
+    } catch (error) {
+        console.error('Tilesets error:', error);
+        res.status(500).json({ error: 'Failed to get available tilesets' });
+    }
+});
+
+// --- Real Traffic API Routes ---
+
+// Get real-time traffic data for a city
+app.get('/api/traffic/realtime/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const cityCoordinates = {
+            'Bangalore': { lat: 12.9716, lng: 77.5946 },
+            'Mumbai': { lat: 19.0760, lng: 72.8777 },
+            'Delhi': { lat: 28.6139, lng: 77.2090 },
+            'Chennai': { lat: 13.0827, lng: 80.2707 },
+            'Hyderabad': { lat: 17.3850, lng: 78.4867 },
+            'Kolkata': { lat: 22.5726, lng: 88.3639 },
+            'Pune': { lat: 18.5204, lng: 73.8567 }
+        };
+
+        const coordinates = cityCoordinates[city];
+        if (!coordinates) {
+            return res.status(404).json({ error: 'City not found' });
+        }
+
+        const trafficData = await realTrafficService.getRealTimeTraffic(city, coordinates);
+        res.json(trafficData);
+    } catch (error) {
+        console.error('Real-time traffic error:', error);
+        res.status(500).json({ error: 'Failed to fetch real-time traffic data' });
+    }
+});
+
+// Get real-time traffic for multiple cities
+app.post('/api/traffic/realtime/multi', async (req, res) => {
+    try {
+        const { cities } = req.body;
+        if (!cities || !Array.isArray(cities)) {
+            return res.status(400).json({ error: 'Cities array is required' });
+        }
+
+        const trafficData = await realTrafficService.getMultiCityTraffic(cities);
+        res.json(trafficData);
+    } catch (error) {
+        console.error('Multi-city traffic error:', error);
+        res.status(500).json({ error: 'Failed to fetch multi-city traffic data' });
+    }
+});
+
+// Get traffic patterns and historical data
+app.get('/api/traffic/patterns/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const { hours = 24 } = req.query;
+        
+        const patterns = await realTrafficService.getTrafficPatterns(city, parseInt(hours));
+        res.json(patterns);
+    } catch (error) {
+        console.error('Traffic patterns error:', error);
+        res.status(500).json({ error: 'Failed to fetch traffic patterns' });
+    }
+});
+
+// Get live traffic incidents
+app.get('/api/traffic/incidents/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const cityCoordinates = {
+            'Bangalore': { lat: 12.9716, lng: 77.5946 },
+            'Mumbai': { lat: 19.0760, lng: 72.8777 },
+            'Delhi': { lat: 28.6139, lng: 77.2090 },
+            'Chennai': { lat: 13.0827, lng: 80.2707 },
+            'Hyderabad': { lat: 17.3850, lng: 78.4867 },
+            'Kolkata': { lat: 22.5726, lng: 88.3639 },
+            'Pune': { lat: 18.5204, lng: 73.8567 }
+        };
+
+        const coordinates = cityCoordinates[city];
+        if (!coordinates) {
+            return res.status(404).json({ error: 'City not found' });
+        }
+
+        const trafficData = await realTrafficService.getRealTimeTraffic(city, coordinates);
+        res.json({
+            incidents: trafficData.incidents || [],
+            timestamp: trafficData.timestamp,
+            source: trafficData.source
+        });
+    } catch (error) {
+        console.error('Traffic incidents error:', error);
+        res.status(500).json({ error: 'Failed to fetch traffic incidents' });
+    }
+});
+
+// Traffic data streaming endpoint (Server-Sent Events)
+app.get('/api/traffic/stream/:city', async (req, res) => {
+    const { city } = req.params;
+    const { interval = 30000 } = req.query; // Default 30 seconds
+    
+    // Set headers for Server-Sent Events
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    const cityCoordinates = {
+        'Bangalore': { lat: 12.9716, lng: 77.5946 },
+        'Mumbai': { lat: 19.0760, lng: 72.8777 },
+        'Delhi': { lat: 28.6139, lng: 77.2090 },
+        'Chennai': { lat: 13.0827, lng: 80.2707 },
+        'Hyderabad': { lat: 17.3850, lng: 78.4867 },
+        'Kolkata': { lat: 22.5726, lng: 88.3639 },
+        'Pune': { lat: 18.5204, lng: 73.8567 }
+    };
+
+    const coordinates = cityCoordinates[city];
+    if (!coordinates) {
+        res.write(`data: ${JSON.stringify({ error: 'City not found' })}\n\n`);
+        res.end();
+        return;
+    }
+
+    // Send initial data
+    try {
+        const initialData = await realTrafficService.getRealTimeTraffic(city, coordinates);
+        res.write(`data: ${JSON.stringify(initialData)}\n\n`);
+    } catch (error) {
+        res.write(`data: ${JSON.stringify({ error: 'Failed to fetch initial data' })}\n\n`);
+    }
+
+    // Set up interval for streaming updates
+    const streamInterval = setInterval(async () => {
+        try {
+            const trafficData = await realTrafficService.getRealTimeTraffic(city, coordinates);
+            res.write(`data: ${JSON.stringify(trafficData)}\n\n`);
+        } catch (error) {
+            console.error('Stream error:', error);
+            res.write(`data: ${JSON.stringify({ error: 'Stream error', timestamp: Date.now() })}\n\n`);
+        }
+    }, parseInt(interval));
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+        clearInterval(streamInterval);
+        console.log(`Traffic stream closed for ${city}`);
+    });
+
+    req.on('end', () => {
+        clearInterval(streamInterval);
+        console.log(`Traffic stream ended for ${city}`);
+    });
+});
+
 // --- Vehicle Routes ---
 app.use('/api/vehicles', vehicleRoutes);
+
+// --- Live Locations Routes ---
+app.use('/api/live-locations', liveLocationsRoutes);
 
 // --- Database Routes ---
 
@@ -1019,11 +1415,32 @@ async function startServer() {
         await initializeDatabase();
         console.log('✅ SQLite Database initialized successfully');
         
-        app.listen(port, () => {
-            console.log(`🚀 BharatFlow AI Backend running at http://localhost:${port}`);
+        app.listen(port, host, () => {
+            console.log(`🚀 BharatFlow AI Backend running at http://${host}:${port}`);
             console.log(`🤖 ML API expected at http://localhost:5000`);
             console.log(`🔍 Search Engine AI endpoints available at /api/search/*`);
             console.log(`💾 Using SQLite database (No MongoDB required)`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🚦 Real Traffic: ${features.realTraffic ? 'Enabled' : 'Disabled'}`);
+            console.log(`🧠 AI Analysis: ${features.aiAnalysis ? 'Enabled' : 'Disabled'}`);
+            console.log(`📡 Streaming: ${features.streaming ? 'Enabled' : 'Disabled'}`);
+            console.log(`🏙️  Multi-City: ${features.multiCity ? 'Enabled' : 'Disabled'}`);
+            
+            // Log available traffic APIs
+            const availableApis = [];
+            if (process.env.TOMTOM_API_KEY) availableApis.push('TomTom');
+            if (process.env.MAPBOX_API_KEY) availableApis.push('Mapbox');
+            if (process.env.HERE_API_KEY) availableApis.push('HERE');
+            if (process.env.GOOGLE_MAPS_API_KEY) availableApis.push('Google');
+            
+            if (availableApis.length > 0) {
+                console.log(`🗺️  Traffic APIs: ${availableApis.join(', ')}`);
+            } else {
+                console.log(`🎭 Traffic Mode: Intelligent Simulation (No API keys configured)`);
+            }
+            
+            console.log(`⚡ Rate Limit: ${apiCallTracker.maxCallsPerMinute} calls/minute`);
+            console.log(`📊 Cache Duration: ${parseInt(process.env.TRAFFIC_CACHE_DURATION) || 300000}ms`);
         });
     } catch (error) {
         console.error('❌ Failed to start server:', error);

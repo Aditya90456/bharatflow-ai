@@ -47,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navigationItems = [
     { id: 'DASHBOARD', label: 'Dashboard', icon: ChartBarIcon },
+    { id: 'REAL_TRAFFIC', label: 'Live Traffic', icon: MapIcon },
     { id: 'FEATURES', label: 'Features', icon: SparklesIcon },
     { id: 'PUBLIC_MAP', label: 'Live Map', icon: MapIcon },
     { id: 'API_DOCS', label: 'API Docs', icon: DocumentTextIcon },

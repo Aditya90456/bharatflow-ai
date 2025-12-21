@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationCanvas } from './SimulationCanvas'; 
+import { RealTimeCanvas } from './RealTimeCanvas';
 import { Intersection, Car, Incident, Road } from '../types';
 import {
   PlayIcon,
@@ -8,10 +8,13 @@ import {
   Squares2X2Icon,
   CpuChipIcon,
   MapIcon,
+  SignalIcon,
+  EyeIcon,
+  BoltIcon,
 } from '@heroicons/react/24/outline';
 import { Tooltip } from './Tooltip';
 
-interface SimulationSectionProps {
+interface RealTimeMovementSectionProps {
   currentCity: string;
   isRunning: boolean;
   setIsRunning: (val: boolean) => void;
@@ -39,7 +42,7 @@ interface SimulationSectionProps {
   highlightedIntersectionId?: string | null;
 }
 
-export const SimulationSection: React.FC<SimulationSectionProps> = ({
+export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
   currentCity,
   isRunning,
   setIsRunning,
@@ -67,6 +70,8 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
   highlightedIntersectionId,
 }) => {
   const [headerPulse, setHeaderPulse] = useState(false);
+  const [realTimeMode, setRealTimeMode] = useState(true);
+  const [dataStreamActive, setDataStreamActive] = useState(true);
 
   useEffect(() => {
     setHeaderPulse(true);
@@ -78,33 +83,59 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
 
   return (
     <main className="absolute inset-0 flex flex-col min-w-0 bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-indigo-900/95 backdrop-blur-xl rounded-3xl p-2 overflow-hidden transition-all duration-300 border border-white/10 shadow-2xl">
-      {/* Premium Header with Indian Government Aesthetics */}
+      {/* Premium Header with Real-Time Movement Aesthetics */}
       <header className={`h-20 flex items-center px-8 transition-all duration-500 relative overflow-hidden ${headerPulse ? 'pulse-glow' : ''}`}>
         {/* Animated Background Elements */}
-        <div className="absolute inset-0 bg-gradient-to-r from-saffron/10 via-transparent to-green-500/10 animate-pulse"></div>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-saffron via-white to-green-500"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-cyan-500/10 animate-pulse"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 animate-pulse"></div>
         
         <div className="flex items-center gap-6 w-full relative z-10">
           <div className="flex items-center gap-4">
-            {/* Premium Title with Government Branding */}
+            {/* Premium Title with Real-Time Branding */}
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-saffron via-orange-500 to-red-600 flex items-center justify-center shadow-2xl shadow-saffron/40 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 via-cyan-500 to-blue-600 flex items-center justify-center shadow-2xl shadow-emerald-500/40 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                <MapIcon className="w-7 h-7 text-white relative z-10 drop-shadow-lg" />
+                <BoltIcon className="w-7 h-7 text-white relative z-10 drop-shadow-lg animate-pulse" />
               </div>
               <div className="flex flex-col">
-                <div className="text-2xl font-display font-black tracking-wider leading-none text-white drop-shadow-lg bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent">
-                  NEURAL TRAFFIC GRID
+                <div className="text-2xl font-display font-black tracking-wider leading-none text-white drop-shadow-lg bg-gradient-to-r from-emerald-300 via-cyan-200 to-blue-200 bg-clip-text text-transparent">
+                  REAL-TIME MOVEMENT
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-cyan-300 font-mono tracking-wider">🇮🇳 {currentCity} Command Center</span>
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                  <span className="text-emerald-300 font-mono tracking-wider">🚀 {currentCity} Live Canvas</span>
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50"></div>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="ml-auto flex items-center gap-4">
+            {/* Real-Time Controls */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDataStreamActive(!dataStreamActive)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
+                  dataStreamActive 
+                    ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' 
+                    : 'bg-gray-500/20 border border-gray-500/30 text-gray-400'
+                } backdrop-blur-sm`}
+              >
+                <SignalIcon className="w-4 h-4" />
+                <span className="text-xs font-mono font-medium">DATA STREAM</span>
+              </button>
+              
+              <button
+                onClick={() => setRealTimeMode(!realTimeMode)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
+                  realTimeMode 
+                    ? 'bg-cyan-500/20 border border-cyan-500/30 text-cyan-300' 
+                    : 'bg-gray-500/20 border border-gray-500/30 text-gray-400'
+                } backdrop-blur-sm`}
+              >
+                <EyeIcon className="w-4 h-4" />
+                <span className="text-xs font-mono font-medium">LIVE MODE</span>
+              </button>
+            </div>
 
             {/* Status Indicators */}
             <div className="flex items-center gap-3">
@@ -113,9 +144,9 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
                 <span className="text-red-300 text-xs font-mono font-medium">INCIDENTS</span>
               </div>
               
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/20 border border-green-500/30 backdrop-blur-sm">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                <span className="text-green-300 text-xs font-mono font-medium">LIVE</span>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-sm">
+                <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50"></div>
+                <span className="text-emerald-300 text-xs font-mono font-medium">STREAMING</span>
               </div>
             </div>
           </div>
@@ -123,7 +154,7 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
       </header>
 
       <section className="flex-1 flex flex-col bg-gray-900 rounded-xl p-4 relative">
-        <SimulationCanvas
+        <RealTimeCanvas
           intersections={intersections}
           setIntersections={setIntersections}
           cars={cars}
@@ -145,18 +176,20 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
           highlightedVehicleIds={highlightedVehicleIds}
           highlightedIncidentIds={highlightedIncidentIds}
           highlightedIntersectionId={highlightedIntersectionId}
+          realTimeMode={realTimeMode}
+          dataStreamActive={dataStreamActive}
         />
 
         <div className="absolute right-6 bottom-6 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-xl p-2 shadow-lg">
           <button
             onClick={toggleRunning}
             className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-transform duration-200 ${
-              isRunning ? 'bg-red-600 hover:scale-105' : 'bg-green-600 hover:scale-105'
+              isRunning ? 'bg-red-600 hover:scale-105' : 'bg-emerald-600 hover:scale-105'
             }`}
             type="button"
           >
             {isRunning ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
-            <span className="hidden sm:inline">{isRunning ? 'Pause' : 'Start'}</span>
+            <span className="hidden sm:inline">{isRunning ? 'Pause' : 'Stream'}</span>
           </button>
 
           <button
@@ -170,7 +203,7 @@ export const SimulationSection: React.FC<SimulationSectionProps> = ({
           <button
             onClick={() => setCvModeActive(!cvModeActive)}
             className={`p-2 rounded-md transition-all ${
-              cvModeActive ? 'bg-yellow-400 text-black shadow-xl scale-105' : 'hover:bg-white/6'
+              cvModeActive ? 'bg-emerald-400 text-black shadow-xl scale-105' : 'hover:bg-white/6'
             }`}
             type="button"
           >

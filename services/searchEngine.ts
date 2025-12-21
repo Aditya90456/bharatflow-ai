@@ -1,4 +1,5 @@
 import { SearchEngine, SearchContext, SearchResultItem, SearchSuggestion, TrafficData } from '../types';
+import { osmLocationService, OSMLocation } from './osmLocationService';
 
 export class BharatFlowSearchEngine implements SearchEngine {
   private searchIndex: Map<string, any> = new Map();

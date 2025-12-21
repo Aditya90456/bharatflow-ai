@@ -11,6 +11,7 @@ const RealtimeAiPage = lazy(() => import('./components/PublicPages').then(module
 const JunctionsAiPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.JunctionsAiPage })));
 const MlDesignPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.MlDesignPage })));
 const HldPage = lazy(() => import('./components/PublicPages').then(module => ({ default: module.HldPage })));
+const RealTimeTrafficPage = lazy(() => import('./components/RealTimeTrafficPage').then(module => ({ default: module.RealTimeTrafficPage })));
 
 // Core dashboard components - load immediately for better UX
 import { SimulationSection } from './components/SimulationSection';
@@ -29,7 +30,7 @@ import {
   ClockIcon, BoltIcon, CloudIcon, SignalIcon, ExclamationTriangleIcon, CircleStackIcon, MapPinIcon, CodeBracketIcon
 } from '@heroicons/react/24/outline';
 
-type ViewState = 'LANDING' | 'DASHBOARD' | 'FEATURES' | 'PUBLIC_MAP' | 'PUBLIC_DATA' | 'API_DOCS' | 'AI_FEATURES' | 'REALTIME_AI' | 'JUNCTIONS_AI' | 'ML_DESIGN' | 'HLD';
+type ViewState = 'LANDING' | 'DASHBOARD' | 'FEATURES' | 'PUBLIC_MAP' | 'PUBLIC_DATA' | 'API_DOCS' | 'AI_FEATURES' | 'REALTIME_AI' | 'JUNCTIONS_AI' | 'ML_DESIGN' | 'HLD' | 'REAL_TRAFFIC';
 type ActiveTab = 'OVERVIEW' | 'JUNCTION' | 'UNIT' | 'INTEL' | 'CCTV' | 'INCIDENT' | 'DATA_HUB';
 
 
@@ -403,6 +404,7 @@ export const App: React.FC = () => {
     case 'JUNCTIONS_AI': return <JunctionsAiPage {...publicPageProps} />;
     case 'ML_DESIGN': return <MlDesignPage {...publicPageProps} />;
     case 'HLD': return <HldPage {...publicPageProps} />;
+    case 'REAL_TRAFFIC': return <RealTimeTrafficPage {...publicPageProps} />;
   }
 
   return (
