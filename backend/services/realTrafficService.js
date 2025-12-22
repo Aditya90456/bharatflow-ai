@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { DatabaseService } from '../database.js';
+import trafficSimulationService from './trafficSimulationService.js';
 
 // Real Traffic Data Service
 // Integrates with multiple traffic APIs to provide real-time traffic data
@@ -39,8 +40,8 @@ class RealTrafficService {
             } else if (this.apiKeys.here) {
                 trafficData = await this.getHereTraffic(coordinates);
             } else {
-                // Fallback to simulated data
-                trafficData = this.generateSimulatedTraffic(city, coordinates);
+                // Fallback to enhanced simulated data
+                trafficData = await this.generateSimulatedTraffic(city, coordinates);
             }
 
             // Cache the result
@@ -52,8 +53,8 @@ class RealTrafficService {
             return trafficData;
         } catch (error) {
             console.error('Real traffic API error:', error);
-            // Return simulated data as fallback
-            return this.generateSimulatedTraffic(city, coordinates);
+            // Return enhanced simulated data as fallback
+            return await this.generateSimulatedTraffic(city, coordinates);
         }
     }
 
@@ -179,34 +180,9 @@ class RealTrafficService {
     }
 
     // Generate simulated traffic data as fallback
-    generateSimulatedTraffic(city, coordinates) {
-        const hour = new Date().getHours();
-        const isRushHour = (hour >= 7 && hour <= 10) || (hour >= 17 && hour <= 20);
-        const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
-        
-        let baseCongestion = 0.3;
-        if (isRushHour && !isWeekend) baseCongestion = 0.8;
-        else if (isRushHour && isWeekend) baseCongestion = 0.5;
-        else if (!isWeekend) baseCongestion = 0.4;
-        
-        // Add some randomness
-        const congestionLevel = Math.min(1, baseCongestion + (Math.random() - 0.5) * 0.3);
-        const freeFlowSpeed = 50;
-        const currentSpeed = freeFlowSpeed * (1 - congestionLevel);
-        
-        return {
-            source: 'simulated',
-            timestamp: Date.now(),
-            currentSpeed: Math.round(currentSpeed),
-            freeFlowSpeed,
-            congestionLevel: Math.round(congestionLevel * 100),
-            confidence: 0.7,
-            coordinates,
-            city,
-            isRushHour,
-            isWeekend,
-            incidents: this.generateSimulatedIncidents(city, coordinates, congestionLevel)
-        };
+    async generateSimulatedTraffic(city, coordinates) {
+        // Use enhanced simulation service
+        return await trafficSimulationService.generateTrafficData(city, coordinates);
     }
 
     // Generate simulated incidents

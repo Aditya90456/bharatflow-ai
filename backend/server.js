@@ -7,6 +7,7 @@ import { initializeDatabase, DatabaseService } from './database.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
 import liveLocationsRoutes from './routes/liveLocationsRoutes.js';
 import realTrafficService from './services/realTrafficService.js';
+import trafficSimulationService from './services/trafficSimulationService.js';
 import mapTilesService from './services/mapTilesService.js';
 import osmTilesService from './services/osmTilesService.js';
 
@@ -23,11 +24,16 @@ if (!process.env.GEMINI_API_KEY && !process.env.API_KEY) {
 
 const app = express();
 const port = process.env.PORT || 3001;
-const host = process.env.HOST || 'localhost';
+const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : (process.env.HOST || 'localhost');
 
 // Environment-based configuration
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Ensure we bind to all interfaces in production (required for Render)
+if (isProduction) {
+    process.env.HOST = '0.0.0.0';
+}
 
 // Feature flags
 const features = {
@@ -896,6 +902,16 @@ app.get('/api/search/analytics', (req, res) => {
 
 // --- Health Check Endpoints ---
 
+// Simple health check for deployment platforms
+app.get('/', (req, res) => {
+    res.json({
+        status: 'BharatFlow AI Backend is running',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // API health check
 app.get('/api/health', (req, res) => {
     const canMakeAICall = apiCallTracker.canMakeCall();
@@ -1303,6 +1319,74 @@ app.get('/api/traffic/stream/:city', async (req, res) => {
     });
 });
 
+// Traffic prediction endpoint
+app.get('/api/traffic/predict/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const { minutes = 30 } = req.query;
+        
+        const cityCoordinates = {
+            'Bangalore': { lat: 12.9716, lng: 77.5946 },
+            'Mumbai': { lat: 19.0760, lng: 72.8777 },
+            'Delhi': { lat: 28.6139, lng: 77.2090 },
+            'Chennai': { lat: 13.0827, lng: 80.2707 },
+            'Hyderabad': { lat: 17.3850, lng: 78.4867 },
+            'Kolkata': { lat: 22.5726, lng: 88.3639 },
+            'Pune': { lat: 18.5204, lng: 73.8567 }
+        };
+
+        const coordinates = cityCoordinates[city];
+        if (!coordinates) {
+            return res.status(404).json({ error: 'City not found' });
+        }
+
+        const prediction = await trafficSimulationService.generateTrafficPrediction(
+            city, 
+            coordinates, 
+            parseInt(minutes)
+        );
+        
+        res.json(prediction);
+    } catch (error) {
+        console.error('Traffic prediction error:', error);
+        res.status(500).json({ error: 'Failed to generate traffic prediction' });
+    }
+});
+
+// Historical traffic patterns endpoint
+app.get('/api/traffic/historical/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const { hours = 24 } = req.query;
+        
+        const patterns = await trafficSimulationService.generateHistoricalPattern(
+            city, 
+            parseInt(hours)
+        );
+        
+        res.json({
+            city,
+            hours: parseInt(hours),
+            patterns,
+            generatedAt: Date.now()
+        });
+    } catch (error) {
+        console.error('Historical traffic error:', error);
+        res.status(500).json({ error: 'Failed to fetch historical traffic patterns' });
+    }
+});
+
+// Traffic simulation statistics
+app.get('/api/traffic/simulation/stats', (req, res) => {
+    try {
+        const stats = trafficSimulationService.getSimulationStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('Simulation stats error:', error);
+        res.status(500).json({ error: 'Failed to get simulation statistics' });
+    }
+});
+
 // --- Vehicle Routes ---
 app.use('/api/vehicles', vehicleRoutes);
 
@@ -1415,7 +1499,7 @@ async function startServer() {
         await initializeDatabase();
         console.log('✅ SQLite Database initialized successfully');
         
-        app.listen(port, host, () => {
+        app.listen(port, () => {
             console.log(`🚀 BharatFlow AI Backend running at http://${host}:${port}`);
             console.log(`🤖 ML API expected at http://localhost:5000`);
             console.log(`🔍 Search Engine AI endpoints available at /api/search/*`);
