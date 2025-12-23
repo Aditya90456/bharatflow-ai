@@ -1387,6 +1387,168 @@ app.get('/api/traffic/simulation/stats', (req, res) => {
     }
 });
 
+// --- User Location API Routes ---
+
+// Save user location
+app.post('/api/user-location', async (req, res) => {
+    try {
+        const { userId, name, location, vehicleType, city } = req.body;
+        
+        if (!userId || !name || !location || !city) {
+            return res.status(400).json({ error: 'Missing required fields: userId, name, location, city' });
+        }
+
+        // In a real app, you'd save this to a database
+        // For now, we'll just return success
+        const userLocationData = {
+            id: userId,
+            name,
+            location: {
+                ...location,
+                timestamp: Date.now()
+            },
+            vehicleType: vehicleType || 'CAR',
+            city,
+            status: 'ACTIVE'
+        };
+
+        console.log(`User location saved: ${name} in ${city} at ${location.lat}, ${location.lng}`);
+        
+        res.json({
+            success: true,
+            data: userLocationData,
+            message: 'User location saved successfully'
+        });
+    } catch (error) {
+        console.error('Save user location error:', error);
+        res.status(500).json({ error: 'Failed to save user location' });
+    }
+});
+
+// Get user locations for a city
+app.get('/api/user-locations/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        
+        // In a real app, you'd fetch from database
+        // For now, return empty array or mock data
+        const mockUsers = [
+            {
+                id: 'user-1',
+                name: 'Raj Kumar',
+                location: {
+                    lat: 12.9716,
+                    lng: 77.5946,
+                    accuracy: 10,
+                    timestamp: Date.now() - 30000
+                },
+                vehicleType: 'CAR',
+                city,
+                status: 'MOVING'
+            }
+        ];
+
+        res.json({
+            users: mockUsers,
+            count: mockUsers.length,
+            city
+        });
+    } catch (error) {
+        console.error('Get user locations error:', error);
+        res.status(500).json({ error: 'Failed to retrieve user locations' });
+    }
+});
+
+// Update user location
+app.put('/api/user-location/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { location, status } = req.body;
+        
+        if (!location) {
+            return res.status(400).json({ error: 'Location data is required' });
+        }
+
+        // In a real app, you'd update the database
+        const updatedLocation = {
+            ...location,
+            timestamp: Date.now()
+        };
+
+        console.log(`User location updated: ${userId} at ${location.lat}, ${location.lng}`);
+        
+        res.json({
+            success: true,
+            userId,
+            location: updatedLocation,
+            status: status || 'ACTIVE'
+        });
+    } catch (error) {
+        console.error('Update user location error:', error);
+        res.status(500).json({ error: 'Failed to update user location' });
+    }
+});
+
+// Delete user location
+app.delete('/api/user-location/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // In a real app, you'd delete from database
+        console.log(`User location deleted: ${userId}`);
+        
+        res.json({
+            success: true,
+            userId,
+            message: 'User location deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete user location error:', error);
+        res.status(500).json({ error: 'Failed to delete user location' });
+    }
+});
+
+// Get nearby users (within radius)
+app.post('/api/user-locations/nearby', async (req, res) => {
+    try {
+        const { lat, lng, radius = 5000, city } = req.body; // radius in meters
+        
+        if (!lat || !lng || !city) {
+            return res.status(400).json({ error: 'Missing required fields: lat, lng, city' });
+        }
+
+        // In a real app, you'd use geospatial queries
+        // For now, return mock nearby users
+        const nearbyUsers = [
+            {
+                id: 'nearby-user-1',
+                name: 'Priya Sharma',
+                location: {
+                    lat: lat + 0.001,
+                    lng: lng + 0.001,
+                    accuracy: 15,
+                    timestamp: Date.now() - 10000
+                },
+                vehicleType: 'AUTO',
+                city,
+                status: 'STOPPED',
+                distance: 150 // meters
+            }
+        ];
+
+        res.json({
+            users: nearbyUsers,
+            count: nearbyUsers.length,
+            searchCenter: { lat, lng },
+            radius,
+            city
+        });
+    } catch (error) {
+        console.error('Get nearby users error:', error);
+        res.status(500).json({ error: 'Failed to find nearby users' });
+    }
+});
+
 // --- Vehicle Routes ---
 app.use('/api/vehicles', vehicleRoutes);
 

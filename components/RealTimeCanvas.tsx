@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { GRID_SIZE, BLOCK_SIZE, ROAD_WIDTH, CAR_SIZE, YELLOW_DURATION, MAX_SPEED, ACCELERATION, DECELERATION, getCanvasSize } from '../constants';
-import { Intersection, Car, LightState, VehicleType, Incident, Road } from '../types';
+import { Intersection, Car, LightState, VehicleType, Incident, Road, SimulatedUser } from '../types';
 import { liveLocationsService } from '../services/liveLocationsService';
+import { UserLocationOverlay } from './UserLocationOverlay';
 
 interface RealTimeCanvasProps {
   intersections: Intersection[];
@@ -27,6 +28,10 @@ interface RealTimeCanvasProps {
   highlightedIntersectionId?: string | null;
   realTimeMode: boolean;
   dataStreamActive: boolean;
+  simulatedUsers: SimulatedUser[];
+  selectedUserId: string | null;
+  onUserSelect: (userId: string) => void;
+  userLocationEnabled: boolean;
 }
 
 interface OSMTileData {
@@ -61,6 +66,10 @@ export const RealTimeCanvas: React.FC<RealTimeCanvasProps> = ({
   highlightedIntersectionId,
   realTimeMode,
   dataStreamActive,
+  simulatedUsers,
+  selectedUserId,
+  onUserSelect,
+  userLocationEnabled,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameCountRef = useRef(0);
@@ -1321,15 +1330,45 @@ export const RealTimeCanvas: React.FC<RealTimeCanvasProps> = ({
       e.currentTarget.style.cursor = 'grab';
   };
 
+  // Helper function to convert lat/lng to canvas coordinates
+  const latLngToCanvas = (lat: number, lng: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    // Simple conversion - in a real app, you'd use proper map projection
+    // This assumes the canvas represents the city bounds
+    const cityCoords = cityCoordinates[scenarioKey as keyof typeof cityCoordinates] || cityCoordinates['Bangalore'];
+    
+    // Map lat/lng to canvas coordinates
+    const x = ((lng - cityCoords.lng + 0.1) / 0.2) * canvas.width;
+    const y = ((cityCoords.lat - lat + 0.1) / 0.2) * canvas.height;
+    
+    return { x, y };
+  };
+
   return (
-    <canvas 
-      ref={canvasRef} 
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
-      className="bg-gradient-to-br from-slate-900 to-gray-900" 
-      style={{ cursor: 'grab' }}
-    />
+    <div className="relative w-full h-full">
+      <canvas 
+        ref={canvasRef} 
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        className="bg-gradient-to-br from-slate-900 to-gray-900" 
+        style={{ cursor: 'grab' }}
+      />
+      
+      {/* User Location Overlay */}
+      {userLocationEnabled && (
+        <UserLocationOverlay
+          users={simulatedUsers}
+          canvasWidth={canvasRef.current?.width || 800}
+          canvasHeight={canvasRef.current?.height || 600}
+          onUserSelect={onUserSelect}
+          selectedUserId={selectedUserId}
+          latLngToCanvas={latLngToCanvas}
+        />
+      )}
+    </div>
   );
 };

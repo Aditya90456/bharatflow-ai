@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { RealTimeCanvas } from './RealTimeCanvas';
-import { Intersection, Car, Incident, Road } from '../types';
+import { UserLocationModal } from './UserLocationModal';
+import { Intersection, Car, Incident, Road, SimulatedUser, UserLocation, VehicleType } from '../types';
+import { userLocationSimulation } from '../services/userLocationSimulation';
 import {
   PlayIcon,
   PauseIcon,
@@ -11,6 +13,8 @@ import {
   SignalIcon,
   EyeIcon,
   BoltIcon,
+  UserPlusIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 import { Tooltip } from './Tooltip';
 
@@ -72,12 +76,50 @@ export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
   const [headerPulse, setHeaderPulse] = useState(false);
   const [realTimeMode, setRealTimeMode] = useState(true);
   const [dataStreamActive, setDataStreamActive] = useState(true);
+  
+  // User location states
+  const [showUserLocationModal, setShowUserLocationModal] = useState(false);
+  const [simulatedUsers, setSimulatedUsers] = useState<SimulatedUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [userLocationEnabled, setUserLocationEnabled] = useState(false);
 
   useEffect(() => {
     setHeaderPulse(true);
     const t = setTimeout(() => setHeaderPulse(false), 700);
     return () => clearTimeout(t);
   }, [isRunning]);
+
+  // Subscribe to user location updates
+  useEffect(() => {
+    const unsubscribe = userLocationSimulation.onLocationUpdate((users) => {
+      setSimulatedUsers(users);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Handle adding user location
+  const handleAddUserLocation = (name: string, location: UserLocation, vehicleType: VehicleType) => {
+    const user = userLocationSimulation.addUser(name, location, vehicleType);
+    setUserLocationEnabled(true);
+    
+    // Optionally set a random destination for demonstration
+    setTimeout(() => {
+      const randomDestination = {
+        x: Math.random() * 800 + 100, // Random canvas coordinates
+        y: Math.random() * 600 + 100
+      };
+      userLocationSimulation.setUserDestination(user.id, randomDestination);
+    }, 2000);
+  };
+
+  // Handle adding random users
+  const handleAddRandomUsers = () => {
+    for (let i = 0; i < 3; i++) {
+      userLocationSimulation.addRandomUser(currentCity);
+    }
+    setUserLocationEnabled(true);
+  };
 
   const toggleRunning = () => setIsRunning(!isRunning);
 
@@ -135,6 +177,23 @@ export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
                 <EyeIcon className="w-4 h-4" />
                 <span className="text-xs font-mono font-medium">LIVE MODE</span>
               </button>
+
+              {/* User Location Controls */}
+              <button
+                onClick={() => setShowUserLocationModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-300 backdrop-blur-sm hover:bg-blue-500/30 transition-all"
+              >
+                <UserPlusIcon className="w-4 h-4" />
+                <span className="text-xs font-mono font-medium">ADD USER</span>
+              </button>
+
+              <button
+                onClick={handleAddRandomUsers}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 backdrop-blur-sm hover:bg-purple-500/30 transition-all"
+              >
+                <UsersIcon className="w-4 h-4" />
+                <span className="text-xs font-mono font-medium">RANDOM USERS</span>
+              </button>
             </div>
 
             {/* Status Indicators */}
@@ -148,6 +207,16 @@ export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
                 <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50"></div>
                 <span className="text-emerald-300 text-xs font-mono font-medium">STREAMING</span>
               </div>
+
+              {/* User Location Status */}
+              {userLocationEnabled && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/20 border border-blue-500/30 backdrop-blur-sm">
+                  <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                  <span className="text-blue-300 text-xs font-mono font-medium">
+                    USERS ({simulatedUsers.length})
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -178,6 +247,10 @@ export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
           highlightedIntersectionId={highlightedIntersectionId}
           realTimeMode={realTimeMode}
           dataStreamActive={dataStreamActive}
+          simulatedUsers={simulatedUsers}
+          selectedUserId={selectedUserId}
+          onUserSelect={setSelectedUserId}
+          userLocationEnabled={userLocationEnabled}
         />
 
         <div className="absolute right-6 bottom-6 flex items-center gap-3 bg-black/40 backdrop-blur-sm rounded-xl p-2 shadow-lg">
@@ -217,6 +290,14 @@ export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
           </Tooltip>
         </div>
       </section>
+
+      {/* User Location Modal */}
+      <UserLocationModal
+        isOpen={showUserLocationModal}
+        onClose={() => setShowUserLocationModal(false)}
+        onSubmit={handleAddUserLocation}
+        currentCity={currentCity}
+      />
     </main>
   );
 };

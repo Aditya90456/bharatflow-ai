@@ -171,3 +171,45 @@ export interface TrafficData {
   incidents: Incident[];
   roads: Road[];
 }
+
+// User Location Types
+export interface UserLocation {
+  id: string;
+  lat: number;
+  lng: number;
+  accuracy: number;
+  timestamp: number;
+  speed?: number; // km/h
+  heading?: number; // degrees
+  altitude?: number; // meters
+}
+
+export interface SimulatedUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  location: UserLocation;
+  destination?: Coordinates;
+  route?: Coordinates[];
+  vehicleType: VehicleType;
+  status: 'MOVING' | 'STOPPED' | 'WAITING' | 'ARRIVED';
+  preferences: {
+    avoidTolls: boolean;
+    avoidHighways: boolean;
+    preferFastestRoute: boolean;
+  };
+  journey?: {
+    startTime: number;
+    estimatedArrival: number;
+    distanceRemaining: number;
+    currentSpeed: number;
+  };
+}
+
+export interface LocationSimulationConfig {
+  enabled: boolean;
+  userCount: number;
+  updateInterval: number; // milliseconds
+  movementSpeed: number; // pixels per frame
+  routeVariation: number; // 0-1, how much routes can deviate
+}
