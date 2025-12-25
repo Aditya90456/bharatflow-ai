@@ -344,7 +344,7 @@ export class UserLocationSimulation {
   }
 
   // Simulate user at random location in city
-  addRandomUser(cityName: string): SimulatedUser {
+  async addRandomUser(cityName: string): Promise<SimulatedUser> {
     const cityBounds = this.getCityBounds(cityName);
     const randomLat = cityBounds.minLat + Math.random() * (cityBounds.maxLat - cityBounds.minLat);
     const randomLng = cityBounds.minLng + Math.random() * (cityBounds.maxLng - cityBounds.minLng);
@@ -362,7 +362,7 @@ export class UserLocationSimulation {
     const names = ['Raj', 'Priya', 'Amit', 'Sneha', 'Vikram', 'Anita', 'Rohit', 'Kavya'];
     const vehicleTypes: VehicleType[] = ['CAR', 'AUTO', 'BUS'];
     
-    return this.addUser(
+    return await this.addUser(
       names[Math.floor(Math.random() * names.length)],
       location,
       vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)]

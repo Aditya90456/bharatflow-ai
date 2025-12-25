@@ -99,8 +99,8 @@ export const SimulationSection: React.FC<RealTimeMovementSectionProps> = ({
   }, []);
 
   // Handle adding user location
-  const handleAddUserLocation = (name: string, location: UserLocation, vehicleType: VehicleType) => {
-    const user = userLocationSimulation.addUser(name, location, vehicleType);
+  const handleAddUserLocation = async (name: string, location: UserLocation, vehicleType: VehicleType) => {
+    const user = await userLocationSimulation.addUser(name, location, vehicleType);
     setUserLocationEnabled(true);
     
     // Optionally set a random destination for demonstration
