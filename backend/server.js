@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import { initializeDatabase, DatabaseService } from './database.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
 import liveLocationsRoutes from './routes/liveLocationsRoutes.js';
+import statesRoutes from './routes/statesRoutes.js';
+import userLocationRoutes from './routes/userLocationRoutes.js';
+import realTrafficRoutes from './routes/realTrafficRoutes.js';
 import realTrafficService from './services/realTrafficService.js';
 import trafficSimulationService from './services/trafficSimulationService.js';
 import mapTilesService from './services/mapTilesService.js';
@@ -1554,6 +1557,15 @@ app.use('/api/vehicles', vehicleRoutes);
 
 // --- Live Locations Routes ---
 app.use('/api/live-locations', liveLocationsRoutes);
+
+// --- User Location Routes ---
+app.use('/api/user-locations', userLocationRoutes);
+
+// --- Real Traffic Routes ---
+app.use('/api/real-traffic', realTrafficRoutes);
+
+// --- States and Areas Routes ---
+app.use('/api/states', statesRoutes);
 
 // --- Database Routes ---
 

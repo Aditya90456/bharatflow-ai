@@ -16,6 +16,7 @@ const TrafficDashboard = lazy(() => import('./components/TrafficDashboard').then
 
 // Core components
 import { SimulationSection } from './components/SimulationSection';
+import { SimulationDesignerDemo } from './components/SimulationDesignerDemo';
 import { CameraFeed } from './components/CameraFeed';
 import { VehicleDetails } from './components/VehicleDetails';
 import { IntersectionDetails, IntelFeed, IncidentDetails, OverviewPanel } from './components/SidePanels';
@@ -31,7 +32,7 @@ import {
   BuildingOffice2Icon, ArrowsRightLeftIcon, CpuChipIcon, Cog6ToothIcon, FireIcon, SunIcon, CloudArrowDownIcon
 } from '@heroicons/react/24/outline';
 
-type ViewState = 'LANDING' | 'DASHBOARD' | 'FEATURES' | 'PUBLIC_MAP' | 'PUBLIC_DATA' | 'API_DOCS' | 'AI_FEATURES' | 'REALTIME_AI' | 'JUNCTIONS_AI' | 'ML_DESIGN' | 'HLD' | 'REAL_TRAFFIC' | 'TRAFFIC_DASHBOARD';
+type ViewState = 'LANDING' | 'DASHBOARD' | 'FEATURES' | 'PUBLIC_MAP' | 'PUBLIC_DATA' | 'API_DOCS' | 'AI_FEATURES' | 'REALTIME_AI' | 'JUNCTIONS_AI' | 'ML_DESIGN' | 'HLD' | 'REAL_TRAFFIC' | 'TRAFFIC_DASHBOARD' | 'SIMULATION_DESIGNER';
 type ActiveTab = 'OVERVIEW' | 'JUNCTION' | 'UNIT' | 'INTEL' | 'CCTV' | 'INCIDENT' | 'DATA_HUB';
 
 // 🌟 AWESOME DYNAMIC CITIES CONFIGURATION
@@ -707,6 +708,7 @@ export const App: React.FC = () => {
     case 'HLD': return <Suspense fallback={<LoadingScreen />}><HldPage {...publicPageProps} /></Suspense>;
     case 'REAL_TRAFFIC': return <Suspense fallback={<LoadingScreen />}><RealTimeTrafficPage {...publicPageProps} /></Suspense>;
     case 'TRAFFIC_DASHBOARD': return <Suspense fallback={<LoadingScreen />}><TrafficDashboard {...publicPageProps} /></Suspense>;
+    case 'SIMULATION_DESIGNER': return <SimulationDesignerDemo />;
   }
   return (
     <>

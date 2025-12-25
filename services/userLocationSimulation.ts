@@ -11,9 +11,109 @@ export class UserLocationSimulation {
   };
   private updateTimer: NodeJS.Timeout | null = null;
   private callbacks: Array<(users: SimulatedUser[]) => void> = [];
+  private baseUrl: string;
 
   constructor() {
+    this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
     this.startLocationUpdates();
+  }
+
+  // Save user location to backend
+  private async saveUserToBackend(user: SimulatedUser): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/user-locations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          name: user.name,
+          lat: user.location.lat,
+          lng: user.location.lng,
+          accuracy: user.location.accuracy,
+          speed: user.location.speed,
+          heading: user.location.heading,
+          vehicleType: user.vehicleType,
+          status: user.status
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to save user ${user.name} to backend: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to save user to backend:', error);
+    }
+  }
+
+  // Update user location in backend
+  private async updateUserInBackend(user: SimulatedUser): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/user-locations/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lat: user.location.lat,
+          lng: user.location.lng,
+          accuracy: user.location.accuracy,
+          speed: user.location.speed,
+          heading: user.location.heading,
+          status: user.status
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to update user ${user.name} in backend: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to update user in backend:', error);
+    }
+  }
+
+  // Load users from backend
+  async loadUsersFromBackend(): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/user-locations`);
+      if (!response.ok) {
+        console.warn('Failed to load users from backend');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.userLocations) {
+        data.userLocations.forEach((userLocation: any) => {
+          const user: SimulatedUser = {
+            id: userLocation.userId,
+            name: userLocation.name,
+            location: {
+              id: userLocation.id,
+              lat: userLocation.lat,
+              lng: userLocation.lng,
+              accuracy: userLocation.accuracy || 10,
+              timestamp: userLocation.timestamp,
+              speed: userLocation.speed,
+              heading: userLocation.heading
+            },
+            vehicleType: userLocation.vehicleType as VehicleType,
+            status: userLocation.status as any,
+            preferences: {
+              avoidTolls: false,
+              avoidHighways: false,
+              preferFastestRoute: true
+            }
+          };
+          this.users.set(user.id, user);
+        });
+        
+        this.notifyCallbacks();
+        console.log(`Loaded ${data.userLocations.length} users from backend`);
+      }
+    } catch (error) {
+      console.error('Failed to load users from backend:', error);
+    }
   }
 
   // Ask user for their information
@@ -39,7 +139,7 @@ export class UserLocationSimulation {
   }
 
   // Add a new user to the simulation
-  addUser(name: string, location: UserLocation, vehicleType: VehicleType = 'CAR'): SimulatedUser {
+  async addUser(name: string, location: UserLocation, vehicleType: VehicleType = 'CAR'): Promise<SimulatedUser> {
     const user: SimulatedUser = {
       id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name,
@@ -54,6 +154,10 @@ export class UserLocationSimulation {
     };
 
     this.users.set(user.id, user);
+    
+    // Save to backend
+    await this.saveUserToBackend(user);
+    
     this.notifyCallbacks();
     return user;
   }

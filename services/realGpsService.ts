@@ -5,6 +5,8 @@ export interface GpsOptions {
   timeout?: number;
   maximumAge?: number;
   watchPosition?: boolean;
+  saveToBackend?: boolean;
+  userId?: string;
 }
 
 export interface GpsError {
@@ -19,14 +21,59 @@ export class RealGpsService {
   private errorCallbacks: Array<(error: GpsError) => void> = [];
   private isWatching = false;
   private lastKnownLocation: UserLocation | null = null;
+  private baseUrl: string;
+  private userId: string | null = null;
 
   constructor() {
     this.checkGpsSupport();
+    this.baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+  }
+
+  // Set user ID for backend integration
+  setUserId(userId: string) {
+    this.userId = userId;
   }
 
   // Check if GPS is supported
   private checkGpsSupport(): boolean {
     return 'geolocation' in navigator;
+  }
+
+  // Save location to backend
+  private async saveLocationToBackend(location: UserLocation, userId?: string): Promise<void> {
+    try {
+      const userIdToUse = userId || this.userId;
+      if (!userIdToUse) {
+        console.warn('No user ID provided for backend save');
+        return;
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/user-locations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userIdToUse,
+          name: `User ${userIdToUse}`,
+          lat: location.lat,
+          lng: location.lng,
+          accuracy: location.accuracy,
+          speed: location.speed,
+          heading: location.heading,
+          vehicleType: 'CAR',
+          status: location.speed && location.speed > 0 ? 'MOVING' : 'STOPPED'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend save failed: ${response.status}`);
+      }
+
+      console.log('Location saved to backend successfully');
+    } catch (error) {
+      console.error('Failed to save location to backend:', error);
+    }
   }
 
   // Get current position once
@@ -44,9 +91,15 @@ export class RealGpsService {
       };
 
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const location = this.convertToUserLocation(position);
           this.lastKnownLocation = location;
+          
+          // Save to backend if requested
+          if (options.saveToBackend) {
+            await this.saveLocationToBackend(location, options.userId);
+          }
+          
           resolve(location);
         },
         (error) => {
@@ -76,9 +129,15 @@ export class RealGpsService {
     };
 
     this.watchId = navigator.geolocation.watchPosition(
-      (position) => {
+      async (position) => {
         const location = this.convertToUserLocation(position);
         this.lastKnownLocation = location;
+        
+        // Save to backend if requested
+        if (options.saveToBackend) {
+          await this.saveLocationToBackend(location, options.userId);
+        }
+        
         this.notifyLocationUpdate(location);
       },
       (error) => {

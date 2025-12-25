@@ -7,7 +7,8 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
 
 interface RealGpsTrackerProps {
@@ -16,6 +17,8 @@ interface RealGpsTrackerProps {
   autoStart?: boolean;
   showDetails?: boolean;
   className?: string;
+  userId?: string;
+  saveToBackend?: boolean;
 }
 
 export const RealGpsTracker: React.FC<RealGpsTrackerProps> = ({
@@ -23,7 +26,9 @@ export const RealGpsTracker: React.FC<RealGpsTrackerProps> = ({
   onError,
   autoStart = false,
   showDetails = true,
-  className = ''
+  className = '',
+  userId,
+  saveToBackend = true
 }) => {
   const [isTracking, setIsTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<UserLocation | null>(null);
@@ -31,6 +36,15 @@ export const RealGpsTracker: React.FC<RealGpsTrackerProps> = ({
   const [permission, setPermission] = useState<PermissionState | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [speed, setSpeed] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<number | null>(null);
+
+  // Set user ID in GPS service
+  useEffect(() => {
+    if (userId) {
+      realGpsService.setUserId(userId);
+    }
+  }, [userId]);
 
   // Handle location updates
   const handleLocationUpdate = useCallback((location: UserLocation) => {
@@ -39,7 +53,11 @@ export const RealGpsTracker: React.FC<RealGpsTrackerProps> = ({
     setSpeed(location.speed || null);
     setGpsError(null);
     onLocationUpdate(location);
-  }, [onLocationUpdate]);
+    
+    if (saveToBackend) {
+      setLastSaved(Date.now());
+    }
+  }, [onLocationUpdate, saveToBackend]);
 
   // Handle GPS errors
   const handleGpsError = useCallback((error: GpsError) => {
@@ -56,45 +74,55 @@ export const RealGpsTracker: React.FC<RealGpsTrackerProps> = ({
       return permissionState;
     } catch (error) {
       console.warn('Permission check failed:', error);
-      return 'prompt';
+      setPermission('prompt');
+      return 'prompt' as PermissionState;
     }
   }, []);
 
   // Start GPS tracking
   const startTracking = useCallback(async () => {
     try {
+      setGpsError(null);
+      
       // Check permission first
       const permissionState = await checkPermission();
       
       if (permissionState === 'denied') {
         setGpsError({
           code: 1,
-          message: 'Location permission denied',
+          message: 'Location permission denied. Please enable location access in your browser settings.',
           type: 'PERMISSION_DENIED'
         });
         return;
       }
 
-      // Get initial position
-      const initialLocation = await realGpsService.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      });
-      
-      handleLocationUpdate(initialLocation);
+      setIsTracking(true);
+
+      // Get initial position with better error handling
+      try {
+        const initialLocation = await realGpsService.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000
+        });
+        
+        handleLocationUpdate(initialLocation);
+      } catch (positionError) {
+        console.warn('Initial position failed, starting watch anyway:', positionError);
+        // Continue with watching even if initial position fails
+      }
 
       // Start continuous tracking
       realGpsService.startWatching({
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 5000
+        timeout: 20000,
+        maximumAge: 10000
       });
 
-      setIsTracking(true);
-      setGpsError(null);
     } catch (error) {
+      console.error('GPS tracking start failed:', error);
       handleGpsError(error as GpsError);
+      setIsTracking(false);
     }
   }, [checkPermission, handleLocationUpdate, handleGpsError]);
 
@@ -286,12 +314,61 @@ export const RealGpsTracker: React.FC<RealGpsTrackerProps> = ({
 
       {/* Error Details */}
       {gpsError && (
-        <div className="mt-3 p-2 bg-red-900/30 border border-red-600/30 rounded text-sm">
-          <div className="text-red-400 font-medium">GPS Error</div>
-          <div className="text-red-300">{gpsError.message}</div>
+        <div className="mt-3 p-3 bg-red-900/30 border border-red-600/30 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <ExclamationTriangleIcon className="w-4 h-4 text-red-400" />
+            <div className="text-red-400 font-medium">GPS Error</div>
+          </div>
+          <div className="text-red-300 text-sm mb-2">{gpsError.message}</div>
+          
           {gpsError.type === 'PERMISSION_DENIED' && (
-            <div className="text-red-200 text-xs mt-1">
-              Please enable location permissions in your browser settings
+            <div className="space-y-2">
+              <div className="text-red-200 text-xs">
+                To enable location access:
+              </div>
+              <ul className="text-red-200 text-xs space-y-1 ml-4">
+                <li>• Click the location icon in your browser's address bar</li>
+                <li>• Select "Allow" for location permissions</li>
+                <li>• Refresh the page and try again</li>
+              </ul>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
+          )}
+          
+          {gpsError.type === 'TIMEOUT' && (
+            <div className="space-y-2">
+              <div className="text-red-200 text-xs">
+                GPS signal timeout. Try:
+              </div>
+              <ul className="text-red-200 text-xs space-y-1 ml-4">
+                <li>• Moving to an area with better GPS signal</li>
+                <li>• Checking if location services are enabled</li>
+                <li>• Trying again in a few moments</li>
+              </ul>
+              <button
+                onClick={startTracking}
+                className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+              >
+                Retry GPS
+              </button>
+            </div>
+          )}
+          
+          {gpsError.type === 'POSITION_UNAVAILABLE' && (
+            <div className="space-y-2">
+              <div className="text-red-200 text-xs">
+                GPS position unavailable. This might be due to:
+              </div>
+              <ul className="text-red-200 text-xs space-y-1 ml-4">
+                <li>• Poor GPS signal (try moving outdoors)</li>
+                <li>• Location services disabled on your device</li>
+                <li>• Browser security restrictions</li>
+              </ul>
             </div>
           )}
         </div>

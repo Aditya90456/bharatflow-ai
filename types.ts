@@ -213,3 +213,148 @@ export interface LocationSimulationConfig {
   movementSpeed: number; // pixels per frame
   routeVariation: number; // 0-1, how much routes can deviate
 }
+
+// Police Officer Types
+export interface PoliceOfficer {
+  id: string;
+  badgeNumber: string;
+  name: string;
+  rank: 'CONSTABLE' | 'HEAD_CONSTABLE' | 'SUB_INSPECTOR' | 'INSPECTOR' | 'ACP' | 'DCP';
+  location: UserLocation;
+  status: 'ON_DUTY' | 'OFF_DUTY' | 'RESPONDING' | 'AT_SCENE' | 'PATROL';
+  assignedVehicle?: string; // Car ID
+  currentIncident?: string; // Incident ID
+  specializations: ('TRAFFIC' | 'EMERGENCY' | 'VIP_ESCORT' | 'ACCIDENT_INVESTIGATION')[];
+  contactInfo: {
+    radio: string;
+    mobile: string;
+    emergencyContact: string;
+  };
+  shift: {
+    startTime: string; // HH:MM
+    endTime: string; // HH:MM
+    zone: string;
+  };
+  performance: {
+    responseTime: number; // average minutes
+    incidentsHandled: number;
+    rating: number; // 1-5
+  };
+}
+
+export interface EmergencyCall {
+  id: string;
+  callerId: string;
+  callerPhone: string;
+  location: UserLocation;
+  type: 'ACCIDENT' | 'BREAKDOWN' | 'TRAFFIC_JAM' | 'VIP_MOVEMENT' | 'EMERGENCY_VEHICLE' | 'PROTEST' | 'WEATHER_HAZARD';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  description: string;
+  timestamp: number;
+  status: 'RECEIVED' | 'DISPATCHED' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
+  assignedOfficers: string[]; // Officer IDs
+  estimatedResponseTime?: number; // minutes
+  actualResponseTime?: number; // minutes
+  resolution?: string;
+  media?: {
+    photos: string[];
+    videos: string[];
+    audio: string[];
+  };
+}
+
+export interface PoliceDispatch {
+  id: string;
+  callId: string;
+  officerIds: string[];
+  dispatchTime: number;
+  instructions: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  estimatedArrival: number;
+  status: 'DISPATCHED' | 'ACKNOWLEDGED' | 'EN_ROUTE' | 'ARRIVED' | 'COMPLETED';
+  updates: DispatchUpdate[];
+}
+
+export interface DispatchUpdate {
+  id: string;
+  timestamp: number;
+  officerId: string;
+  type: 'STATUS_UPDATE' | 'LOCATION_UPDATE' | 'INCIDENT_UPDATE' | 'REQUEST_BACKUP';
+  message: string;
+  location?: UserLocation;
+  media?: string[];
+}
+
+export interface TrafficViolation {
+  id: string;
+  type: 'SPEEDING' | 'RED_LIGHT' | 'WRONG_LANE' | 'NO_HELMET' | 'NO_SEATBELT' | 'PARKING' | 'OVERLOADING';
+  vehicleId: string;
+  location: UserLocation;
+  timestamp: number;
+  officerId?: string;
+  fine: number;
+  status: 'DETECTED' | 'ISSUED' | 'PAID' | 'DISPUTED' | 'CANCELLED';
+  evidence: {
+    photos: string[];
+    video?: string;
+    witnessStatements?: string[];
+  };
+  vehicleDetails: {
+    registrationNumber: string;
+    make: string;
+    model: string;
+    color: string;
+  };
+}
+
+export interface PoliceVehicle {
+  id: string;
+  type: 'PATROL_CAR' | 'MOTORCYCLE' | 'PCR_VAN' | 'TRAFFIC_POLICE_BIKE' | 'EMERGENCY_RESPONSE';
+  registrationNumber: string;
+  assignedOfficers: string[];
+  location: UserLocation;
+  status: 'AVAILABLE' | 'ON_PATROL' | 'RESPONDING' | 'AT_SCENE' | 'MAINTENANCE' | 'OFF_DUTY';
+  equipment: ('SPEED_GUN' | 'BREATHALYZER' | 'FIRST_AID' | 'TRAFFIC_CONES' | 'CAMERA' | 'RADIO')[];
+  fuelLevel: number; // 0-100
+  lastMaintenance: number; // timestamp
+  mileage: number;
+}
+
+export interface PoliceStation {
+  id: string;
+  name: string;
+  location: UserLocation;
+  jurisdiction: {
+    areas: string[];
+    intersections: string[];
+    roads: string[];
+  };
+  officers: string[]; // Officer IDs
+  vehicles: string[]; // Vehicle IDs
+  contactInfo: {
+    landline: string;
+    controlRoom: string;
+    emergencyNumber: string;
+  };
+  facilities: ('LOCKUP' | 'FIRST_AID' | 'TRAFFIC_CONTROL_ROOM' | 'VEHICLE_IMPOUND')[];
+}
+
+export interface TrafficControlRoom {
+  id: string;
+  name: string;
+  location: UserLocation;
+  coverage: {
+    intersections: string[];
+    cameras: string[];
+    sensors: string[];
+  };
+  operators: string[]; // Officer IDs
+  systems: {
+    cctv: boolean;
+    trafficLights: boolean;
+    emergencyResponse: boolean;
+    publicAddress: boolean;
+  };
+  activeIncidents: string[]; // Incident IDs
+  emergencyCalls: string[]; // Call IDs
+}

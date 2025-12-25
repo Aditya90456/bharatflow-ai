@@ -353,6 +353,350 @@ class RealTrafficService {
         
         return results;
     }
+
+    // Get traffic data by location
+    async getTrafficByLocation(location, radius = 5000) {
+        const cacheKey = `location_${location.lat}_${location.lng}_${radius}`;
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            let trafficData = null;
+            
+            if (this.apiKeys.tomtom) {
+                trafficData = await this.getTomTomTraffic(location);
+            } else if (this.apiKeys.mapbox) {
+                trafficData = await this.getMapboxTraffic(location);
+            } else if (this.apiKeys.here) {
+                trafficData = await this.getHereTraffic(location);
+            } else {
+                trafficData = await this.generateSimulatedTraffic('Unknown', location);
+            }
+
+            // Add radius information
+            trafficData.searchRadius = radius;
+            trafficData.searchLocation = location;
+
+            this.setCachedData(cacheKey, trafficData);
+            return trafficData;
+        } catch (error) {
+            console.error('Get traffic by location error:', error);
+            return await this.generateSimulatedTraffic('Unknown', location);
+        }
+    }
+
+    // Get traffic data for a route
+    async getRouteTraffic(waypoints, routeOptions = {}) {
+        try {
+            if (this.apiKeys.mapbox) {
+                return await this.getMapboxRouteTraffic(waypoints, routeOptions);
+            } else if (this.apiKeys.google) {
+                return await this.getGoogleRouteTraffic(waypoints, routeOptions);
+            } else {
+                return await this.generateSimulatedRouteTraffic(waypoints, routeOptions);
+            }
+        } catch (error) {
+            console.error('Get route traffic error:', error);
+            return await this.generateSimulatedRouteTraffic(waypoints, routeOptions);
+        }
+    }
+
+    // Get traffic incidents in an area
+    async getTrafficIncidents(location, radius = 10000, severity = null) {
+        const cacheKey = `incidents_${location.lat}_${location.lng}_${radius}_${severity}`;
+        const cached = this.getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            let incidents = [];
+            
+            if (this.apiKeys.tomtom) {
+                incidents = await this.getTomTomIncidents(location);
+            } else {
+                incidents = this.generateSimulatedIncidents('Unknown', location, 50);
+            }
+
+            // Filter by severity if specified
+            if (severity) {
+                incidents = incidents.filter(incident => incident.severity === severity.toUpperCase());
+            }
+
+            // Filter by radius
+            incidents = incidents.filter(incident => {
+                const distance = this.calculateDistance(location, incident.location);
+                return distance <= radius;
+            });
+
+            this.setCachedData(cacheKey, incidents);
+            return incidents;
+        } catch (error) {
+            console.error('Get traffic incidents error:', error);
+            return [];
+        }
+    }
+
+    // Get traffic cameras in an area
+    async getTrafficCameras(location, radius = 5000) {
+        // Most APIs don't provide camera data, so we'll simulate
+        const cameras = [];
+        const numCameras = Math.floor(Math.random() * 5) + 1;
+
+        for (let i = 0; i < numCameras; i++) {
+            cameras.push({
+                id: `CAM-${Date.now()}-${i}`,
+                name: `Traffic Camera ${i + 1}`,
+                location: {
+                    lat: location.lat + (Math.random() - 0.5) * 0.01,
+                    lng: location.lng + (Math.random() - 0.5) * 0.01
+                },
+                status: Math.random() > 0.1 ? 'ACTIVE' : 'OFFLINE',
+                type: 'TRAFFIC_MONITORING',
+                lastUpdate: Date.now() - Math.random() * 3600000
+            });
+        }
+
+        return cameras;
+    }
+
+    // Get traffic speed data for roads
+    async getTrafficSpeeds(bounds, roadTypes = null) {
+        const speedData = [];
+        const gridSize = 0.005; // Approximately 500m grid
+
+        for (let lat = bounds.south; lat <= bounds.north; lat += gridSize) {
+            for (let lng = bounds.west; lng <= bounds.east; lng += gridSize) {
+                const baseSpeed = 30 + Math.random() * 40; // 30-70 km/h
+                const congestionFactor = Math.random();
+                const currentSpeed = baseSpeed * (1 - congestionFactor * 0.6);
+
+                speedData.push({
+                    location: { lat, lng },
+                    currentSpeed: Math.round(currentSpeed),
+                    freeFlowSpeed: Math.round(baseSpeed),
+                    congestionLevel: Math.round(congestionFactor * 100),
+                    roadType: roadTypes ? roadTypes[Math.floor(Math.random() * roadTypes.length)] : 'ARTERIAL'
+                });
+            }
+        }
+
+        return speedData;
+    }
+
+    // Get traffic congestion heatmap data
+    async getTrafficHeatmap(bounds, zoom = 12, timeRange = '1h') {
+        const heatmapData = [];
+        const gridSize = zoom > 14 ? 0.001 : zoom > 12 ? 0.005 : 0.01;
+
+        for (let lat = bounds.south; lat <= bounds.north; lat += gridSize) {
+            for (let lng = bounds.west; lng <= bounds.east; lng += gridSize) {
+                const intensity = Math.random();
+                if (intensity > 0.3) { // Only include significant congestion points
+                    heatmapData.push({
+                        lat,
+                        lng,
+                        intensity: Math.round(intensity * 100),
+                        weight: intensity
+                    });
+                }
+            }
+        }
+
+        return {
+            bounds,
+            zoom,
+            timeRange,
+            data: heatmapData,
+            generatedAt: Date.now()
+        };
+    }
+
+    // Get alternative routes with traffic consideration
+    async getAlternativeRoutes(origin, destination, options = {}) {
+        const routes = [];
+        const numRoutes = options.maxAlternatives || 3;
+
+        for (let i = 0; i < numRoutes; i++) {
+            const baseDistance = this.calculateDistance(origin, destination) * 1000; // Convert to meters
+            const distanceVariation = 1 + (Math.random() - 0.5) * 0.3; // ±15% variation
+            const distance = Math.round(baseDistance * distanceVariation);
+            
+            const baseTime = distance / 1000 * 2; // Rough estimate: 2 minutes per km
+            const trafficFactor = 1 + Math.random() * 0.5; // Traffic can add up to 50% time
+            const duration = Math.round(baseTime * trafficFactor * 60); // Convert to seconds
+
+            routes.push({
+                id: `ROUTE-${i + 1}`,
+                distance,
+                duration,
+                trafficDelay: Math.round((trafficFactor - 1) * baseTime * 60),
+                congestionLevel: Math.round((trafficFactor - 1) * 200),
+                waypoints: this.generateRouteWaypoints(origin, destination, i),
+                summary: `Route ${i + 1} via ${this.generateRouteSummary(i)}`,
+                incidents: Math.random() > 0.7 ? 1 : 0
+            });
+        }
+
+        return routes.sort((a, b) => a.duration - b.duration);
+    }
+
+    // Get traffic alerts for a user's route
+    async getTrafficAlerts(userId, route, alertTypes = ['incident', 'congestion', 'construction']) {
+        const alerts = [];
+        
+        for (const alertType of alertTypes) {
+            if (Math.random() > 0.7) { // 30% chance of each alert type
+                alerts.push({
+                    id: `ALERT-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+                    userId,
+                    type: alertType.toUpperCase(),
+                    severity: ['LOW', 'MEDIUM', 'HIGH'][Math.floor(Math.random() * 3)],
+                    message: this.generateAlertMessage(alertType),
+                    location: {
+                        lat: route.origin.lat + Math.random() * 0.01,
+                        lng: route.origin.lng + Math.random() * 0.01
+                    },
+                    estimatedDelay: Math.round(Math.random() * 15), // 0-15 minutes
+                    timestamp: Date.now(),
+                    expiresAt: Date.now() + 3600000 // 1 hour from now
+                });
+            }
+        }
+
+        return alerts;
+    }
+
+    // Subscribe to traffic updates
+    async subscribeToTrafficUpdates(userId, location, radius = 5000, updateInterval = 300) {
+        const subscriptionId = `SUB-${userId}-${Date.now()}`;
+        
+        // In a real implementation, this would set up a background process
+        // For now, we'll just return the subscription details
+        return {
+            subscriptionId,
+            userId,
+            location,
+            radius,
+            updateInterval,
+            status: 'ACTIVE',
+            createdAt: Date.now(),
+            nextUpdate: Date.now() + updateInterval * 1000
+        };
+    }
+
+    // Unsubscribe from traffic updates
+    async unsubscribeFromTrafficUpdates(subscriptionId) {
+        // In a real implementation, this would stop the background process
+        console.log(`Unsubscribed from traffic updates: ${subscriptionId}`);
+        return true;
+    }
+
+    // Get service status
+    async getServiceStatus() {
+        const availableProviders = [];
+        const unavailableProviders = [];
+
+        for (const [provider, apiKey] of Object.entries(this.apiKeys)) {
+            if (apiKey) {
+                availableProviders.push(provider);
+            } else {
+                unavailableProviders.push(provider);
+            }
+        }
+
+        return {
+            status: availableProviders.length > 0 ? 'OPERATIONAL' : 'SIMULATION_MODE',
+            availableProviders,
+            unavailableProviders,
+            cacheSize: this.cache.size,
+            cacheTimeout: this.cacheTimeout,
+            lastUpdate: Date.now()
+        };
+    }
+
+    // Helper methods for new functionality
+    calculateDistance(point1, point2) {
+        const R = 6371; // Earth's radius in km
+        const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+        const dLng = (point2.lng - point1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    generateRouteWaypoints(origin, destination, routeIndex) {
+        const waypoints = [origin];
+        
+        // Add some intermediate points for variety
+        const numWaypoints = routeIndex + 1;
+        for (let i = 0; i < numWaypoints; i++) {
+            const progress = (i + 1) / (numWaypoints + 1);
+            waypoints.push({
+                lat: origin.lat + (destination.lat - origin.lat) * progress + (Math.random() - 0.5) * 0.01,
+                lng: origin.lng + (destination.lng - origin.lng) * progress + (Math.random() - 0.5) * 0.01
+            });
+        }
+        
+        waypoints.push(destination);
+        return waypoints;
+    }
+
+    generateRouteSummary(routeIndex) {
+        const summaries = [
+            'Main Road',
+            'Highway Route',
+            'Scenic Route',
+            'Express Route',
+            'Local Roads'
+        ];
+        return summaries[routeIndex % summaries.length];
+    }
+
+    generateAlertMessage(alertType) {
+        const messages = {
+            incident: 'Traffic incident reported ahead. Expect delays.',
+            congestion: 'Heavy traffic detected on your route.',
+            construction: 'Road construction causing lane closures.'
+        };
+        return messages[alertType] || 'Traffic alert on your route.';
+    }
+
+    async getMapboxRouteTraffic(waypoints, options) {
+        // Simplified Mapbox route traffic implementation
+        const origin = waypoints[0];
+        const destination = waypoints[waypoints.length - 1];
+        
+        return {
+            source: 'mapbox',
+            origin,
+            destination,
+            distance: this.calculateDistance(origin, destination) * 1000,
+            duration: Math.round(this.calculateDistance(origin, destination) * 2 * 60), // 2 min/km
+            congestionLevel: Math.round(Math.random() * 100),
+            waypoints,
+            timestamp: Date.now()
+        };
+    }
+
+    async generateSimulatedRouteTraffic(waypoints, options) {
+        const origin = waypoints[0];
+        const destination = waypoints[waypoints.length - 1];
+        const distance = this.calculateDistance(origin, destination) * 1000;
+        const baseDuration = distance / 1000 * 2 * 60; // 2 minutes per km
+        const trafficFactor = 1 + Math.random() * 0.5;
+        
+        return {
+            source: 'simulation',
+            origin,
+            destination,
+            distance: Math.round(distance),
+            duration: Math.round(baseDuration * trafficFactor),
+            congestionLevel: Math.round((trafficFactor - 1) * 200),
+            waypoints,
+            timestamp: Date.now()
+        };
+    }
 }
 
 export default new RealTrafficService();

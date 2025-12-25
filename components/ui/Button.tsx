@@ -7,8 +7,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        default: "bg-primary text-white hover:bg-primary/90 shadow-lg hover:shadow-primary/25 hover:shadow-lg",
         primary: "bg-primary text-white hover:bg-primary/90 shadow-lg hover:shadow-primary/25 hover:shadow-lg",
         secondary: "bg-surface border border-border text-foreground hover:bg-surfaceHighlight hover:border-cyan-400/50",
+        outline: "bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500",
         danger: "bg-danger text-white hover:bg-danger/90 shadow-lg hover:shadow-danger/25",
         ghost: "text-foreground hover:bg-surfaceHighlight hover:text-cyan-400",
         neon: "bg-transparent border border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 hover:border-cyan-400 hover:shadow-neon hover:text-white",
@@ -27,7 +29,7 @@ const buttonVariants = cva(
       }
     },
     defaultVariants: {
-      variant: "primary",
+      variant: "default",
       size: "default",
       glow: false
     }

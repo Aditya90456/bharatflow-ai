@@ -173,10 +173,15 @@ export const UserLocationModal: React.FC<UserLocationModalProps> = ({
     setCurrentLocation(null);
   };
 
-  // Auto-request GPS on modal open
+  // Auto-request GPS on modal open with better error handling
   useEffect(() => {
     if (isOpen && locationMethod === 'gps' && gpsStatus === 'idle') {
-      requestGPSLocation();
+      // Small delay to ensure modal is fully rendered
+      const timer = setTimeout(() => {
+        requestGPSLocation();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [isOpen, locationMethod]);
 
