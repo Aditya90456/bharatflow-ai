@@ -92,7 +92,6 @@ export const TrafficOfficerDashboard: React.FC<TrafficOfficerDashboardProps> = (
 
     loadEmergencyCalls();
     const interval = setInterval(loadEmergencyCalls, 3000); // Poll every 3 seconds
-    return () => clearInterval(interval););
     return () => clearInterval(interval);
   }, [officerId]);
 

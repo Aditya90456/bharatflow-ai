@@ -5,7 +5,8 @@ const router = express.Router();
 
 // Initialize database tables for user locations
 async function initializeUserLocationTables() {
-  const db = DatabaseService.getInstance();
+  const { getDatabase } = await import('../database.js');
+  const db = await getDatabase();
   
   // User locations table
   await db.run(`
@@ -81,7 +82,8 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const db = DatabaseService.getInstance();
+    const { getDatabase } = await import('../database.js');
+    const db = await getDatabase();
     const timestamp = Date.now();
     const locationId = `user-${userId}-${timestamp}`;
 
@@ -132,7 +134,8 @@ router.post('/', async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const db = DatabaseService.getInstance();
+    const { getDatabase } = await import('../database.js');
+    const db = await getDatabase();
 
     const userLocation = await db.get(`
       SELECT * FROM user_locations 
@@ -177,7 +180,7 @@ router.get('/:userId', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { city, limit = 50, includeHistory = false } = req.query;
-    const db = DatabaseService.getInstance();
+    const db = await import('../database.js').then(m => m.getDatabase());
 
     let query = `
       SELECT * FROM user_locations 
@@ -242,7 +245,7 @@ router.put('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const updates = req.body;
-    const db = DatabaseService.getInstance();
+    const db = await import('../database.js').then(m => m.getDatabase());
 
     // Get current location
     const currentLocation = await db.get(`
@@ -326,7 +329,7 @@ router.put('/:userId', async (req, res) => {
 router.delete('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const db = DatabaseService.getInstance();
+    const db = await import('../database.js').then(m => m.getDatabase());
 
     await db.run('DELETE FROM user_locations WHERE user_id = ?', [userId]);
     
@@ -349,7 +352,7 @@ router.get('/:userId/history', async (req, res) => {
   try {
     const { userId } = req.params;
     const { hours = 24, limit = 1000 } = req.query;
-    const db = DatabaseService.getInstance();
+    const db = await import('../database.js').then(m => m.getDatabase());
 
     const timeLimit = Date.now() - (parseInt(hours) * 60 * 60 * 1000);
 
@@ -393,7 +396,7 @@ router.post('/:userId/preferences', async (req, res) => {
       notificationEnabled = true
     } = req.body;
 
-    const db = DatabaseService.getInstance();
+    const db = await import('../database.js').then(m => m.getDatabase());
 
     await db.run(`
       INSERT OR REPLACE INTO user_preferences 
