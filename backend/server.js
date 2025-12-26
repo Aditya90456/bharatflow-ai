@@ -9,6 +9,8 @@ import liveLocationsRoutes from './routes/liveLocationsRoutes.js';
 import statesRoutes from './routes/statesRoutes.js';
 import userLocationRoutes from './routes/userLocationRoutes.js';
 import realTrafficRoutes from './routes/realTrafficRoutes.js';
+import jamDetectionRoutes from './routes/jamDetectionRoutes.js';
+import gpsApiRoutes from './routes/gpsApiRoutes.js';
 import realTrafficService from './services/realTrafficService.js';
 import trafficSimulationService from './services/trafficSimulationService.js';
 import mapTilesService from './services/mapTilesService.js';
@@ -558,6 +560,139 @@ app.get('/api/ml/health', async (_req, res) => {
         res.json(health);
     } catch (error) {
         res.json({ status: 'unavailable', error: error.message });
+    }
+});
+
+// --- LLM-Powered Traffic Analysis ---
+
+// Import LLM jam detection service
+import llmJamDetectionService from './services/llmJamDetectionService.js';
+
+// LLM-powered traffic jam detection
+app.post('/api/llm/detect-jams', async (req, res) => {
+    try {
+        const { city, trafficData, gpsData = [] } = req.body;
+        
+        if (!city || !trafficData) {
+            return res.status(400).json({ 
+                error: 'Missing required fields: city and trafficData' 
+            });
+        }
+
+        // Perform LLM-powered jam detection
+        const analysis = await llmJamDetectionService.detectTrafficJams(
+            city, 
+            trafficData, 
+            gpsData
+        );
+
+        res.json(analysis);
+    } catch (error) {
+        console.error('LLM jam detection error:', error);
+        res.status(500).json({ 
+            error: 'Failed to analyze traffic jams',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get LLM service health and configuration
+app.get('/api/llm/health', async (_req, res) => {
+    try {
+        const health = {
+            status: 'active',
+            aiEnabled: !!process.env.GEMINI_API_KEY || !!process.env.API_KEY,
+            cacheSize: llmJamDetectionService.jamCache?.size || 0,
+            lastAnalysis: Date.now(),
+            features: {
+                jamDetection: true,
+                gpsEnhancement: true,
+                predictiveAnalysis: true,
+                heuristicFallback: true
+            }
+        };
+        res.json(health);
+    } catch (error) {
+        res.status(500).json({ 
+            status: 'error', 
+            error: error.message 
+        });
+    }
+});
+
+// Clear LLM analysis cache
+app.post('/api/llm/clear-cache', async (_req, res) => {
+    try {
+        if (llmJamDetectionService.jamCache) {
+            llmJamDetectionService.jamCache.clear();
+        }
+        res.json({ success: true, message: 'LLM cache cleared' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Import LLM analytics service
+import llmAnalyticsService from './services/llmAnalyticsService.js';
+
+// Advanced traffic pattern analysis
+app.post('/api/llm/analyze-patterns', async (req, res) => {
+    try {
+        const { city, timeRange = '24h', includeWeather = false } = req.body;
+        
+        if (!city) {
+            return res.status(400).json({ error: 'City parameter is required' });
+        }
+
+        const analysis = await llmAnalyticsService.analyzeTrafficPatterns(city, timeRange, includeWeather);
+        res.json(analysis);
+    } catch (error) {
+        console.error('Pattern analysis error:', error);
+        res.status(500).json({ 
+            error: 'Failed to analyze traffic patterns',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Incident impact analysis
+app.post('/api/llm/analyze-incident', async (req, res) => {
+    try {
+        const { city, incident, trafficData } = req.body;
+        
+        if (!city || !incident || !trafficData) {
+            return res.status(400).json({ error: 'Missing required fields: city, incident, trafficData' });
+        }
+
+        const analysis = await llmAnalyticsService.analyzeIncidentImpact(city, incident, trafficData);
+        res.json(analysis);
+    } catch (error) {
+        console.error('Incident analysis error:', error);
+        res.status(500).json({ 
+            error: 'Failed to analyze incident impact',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Get LLM analytics metrics
+app.get('/api/llm/metrics', async (_req, res) => {
+    try {
+        const metrics = llmAnalyticsService.getMetrics();
+        res.json(metrics);
+    } catch (error) {
+        console.error('Metrics error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Clear analytics cache
+app.post('/api/llm/clear-analytics-cache', async (_req, res) => {
+    try {
+        const result = llmAnalyticsService.clearCache();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -1563,6 +1698,12 @@ app.use('/api/user-locations', userLocationRoutes);
 
 // --- Real Traffic Routes ---
 app.use('/api/real-traffic', realTrafficRoutes);
+
+// --- Jam Detection Routes ---
+app.use('/api/jam-detection', jamDetectionRoutes);
+
+// --- GPS API Routes ---
+app.use('/api/gps', gpsApiRoutes);
 
 // --- States and Areas Routes ---
 app.use('/api/states', statesRoutes);

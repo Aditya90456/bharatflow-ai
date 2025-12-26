@@ -15,8 +15,12 @@
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "react", "react-dom"]
   },
-  "include": ["./**/*.ts", "./**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*", "components/**/*", "services/**/*", "hooks/**/*", "*.ts", "*.tsx"],
+  "exclude": ["node_modules", "dist", "backend"]
 }
